@@ -1,6 +1,6 @@
 # aio-rinnaicontrolr - Python interface for the Rinnai Control-R API
 
-[![PyPi](https://img.shields.io/pypi/v/aio-rinnaicontrolr/0.2.1.a?style=for-the-badge)](https://pypi.org/project/aio-rinnaicontrolr/0.2.1a/)
+[![PyPi](https://img.shields.io/pypi/v/aio-rinnaicontrolr/0.2.1.a?style=for-the-badge)](https://pypi.org/project/aio-rinnaicontrolr/0.2.1a3/)
 [![License](https://img.shields.io/github/license/explosivo22/aio-rinnaicontrolr?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 
 Python library for communicating with the [Rinnai Control-R Water Heaters and control devices](https://www.rinnai.us/tankless-water-heater/accessories/wifi) via the Rinnai Control-R cloud API.
@@ -18,7 +18,7 @@ NOTE:
 ## Installation
 
 ```
-pip install aio-rinnaicontrolr==0.2.1a1
+pip install aio-rinnaicontrolr==0.2.1a3
 ```
 
 ## Examples
