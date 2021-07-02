@@ -14,6 +14,6 @@ queries every 10 minutes or so, but not much more often.
    
 """
 
-from aio-rinnaicontrolr.api import async_get_api
+from aiorinnai.api import async_get_api
 
 # we told you it was a simple API...

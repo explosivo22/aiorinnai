@@ -12,8 +12,8 @@ except FileNotFoundError:
     long_description = DESCRIPTION
 
 setup(
-    name="aio-rinnaicontrolr",
-    version="0.2.1.a4",
+    name="aiorinnai",
+    version="0.2.1.a5",
     description="Python interface for Rinnai Control-R API",
     long_description=long_description,
     long_description_content_type='text/markdown',
