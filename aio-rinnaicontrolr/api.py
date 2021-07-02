@@ -10,7 +10,7 @@ from .errors import RequestError
 from .device import Device
 from .user import User
 
-from rinnaicontrolr.const import (
+from .const import (
     INIT_AUTH_HEADERS,
     RESPOND_TO_AUTH_CHALLENGE_HEADERS,
     BASE_AUTH_URL,
