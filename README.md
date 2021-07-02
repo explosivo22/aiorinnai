@@ -1,7 +1,7 @@
-# rinnaicontrolr - Python interface for the Rinnai Control-R API
+# aio-rinnaicontrolr - Python interface for the Rinnai Control-R API
 
-[![PyPi](https://img.shields.io/pypi/v/rinnaicontrolr/0.2.1.a?style=for-the-badge)](https://pypi.org/project/rinnaicontrolr/0.2.1a0/)
-[![License](https://img.shields.io/github/license/explosivo22/rinnaicontrolr?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![PyPi](https://img.shields.io/pypi/v/aio-rinnaicontrolr/0.2.1.a?style=for-the-badge)](https://pypi.org/project/aio-rinnaicontrolr/0.2.1a/)
+[![License](https://img.shields.io/github/license/explosivo22/aio-rinnaicontrolr?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 
 Python library for communicating with the [Rinnai Control-R Water Heaters and control devices](https://www.rinnai.us/tankless-water-heater/accessories/wifi) via the Rinnai Control-R cloud API.
 
@@ -18,7 +18,7 @@ NOTE:
 ## Installation
 
 ```
-pip install rinnaicontrolr==0.2.1a0
+pip install aio-rinnaicontrolr==0.2.1a1
 ```
 
 ## Examples
@@ -28,7 +28,7 @@ import asyncio
 
 from aiohttp import ClientSession
 
-from rinnaicontrolr import async_get_api
+from aio-rinnaicontrolr import async_get_api
 
 
 async def main() -> None:
@@ -68,7 +68,7 @@ import asyncio
 
 from aiohttp import ClientSession
 
-from rinnaicontrolr import async_get_api
+from aio-rinnaicontrolr import async_get_api
 
 
 async def main() -> None:
