@@ -13,7 +13,7 @@ except FileNotFoundError:
 
 setup(
     name="api-rinnaicontrolr",
-    version="0.2.1.a1",
+    version="0.2.1.a2",
     description="Python interface for Rinnai Control-R API",
     long_description=long_description,
     long_description_content_type='text/markdown',
