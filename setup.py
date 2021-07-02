@@ -1,16 +1,22 @@
-import os.path
+import io
+import os
+
 from setuptools import setup
 
 # The text of the README file
-with open(os.path.join(HERE, "README.md")) as fid:
-    README = fid.read()
+here = os.path.abspath(os.path.dirname(__file__))
+try:
+    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+        long_description = '\n' + f.read()
+except FileNotFoundError:
+    long_description = DESCRIPTION
 
-setuptools.setup(
+setup(
     name="api-rinnaicontrolr",
     version="0.2.1.a1",
     description="Python interface for Rinnai Control-R API",
-    long_description=README,
-    long_description_content_type="text/markdown",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url="https://github.com/explosivo22/aio-rinnaicontrolr",
     author="Brad Barbour",
     author_email="barbourbj@gmail.com",
