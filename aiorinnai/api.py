@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, time
 from typing import Optional
 
 from aiohttp import ClientSession, ClientTimeout
-from aiohttp.client_exceptions import ClientError
+from aiohttp.client_exceptions import ClientError, ServerTimeoutError
 
 from .errors import RequestError
 from .device import Device
@@ -129,8 +129,9 @@ class API(object):
                 data: dict = await resp.json(content_type=None)
                 resp.raise_for_status()
                 return data
+
         except ClientError as err:
-            raise RequestError(f"There was an error while requesting {url}") from err
+            raise RequestError(f"There was the following error while requesting {url}: {err}") from err
         finally:
             if not use_running_session:
                 await session.close()
