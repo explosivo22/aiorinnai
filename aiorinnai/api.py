@@ -68,7 +68,7 @@ class API(object):
         aws = AWSSRP(username=self._username, password=self._password, pool_id=POOL_ID,
                      client_id=CLIENT_ID, pool_region=POOL_REGION)
 
-        await self._store_token(aws.authenticate_user())
+        await self._store_token(await aws.authenticate_user())
 
         if not self.user:
             self.user = User(self._request, self._username)
