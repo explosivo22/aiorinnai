@@ -21,7 +21,7 @@ setup(
     author="Brad Barbour",
     author_email="barbourbj@gmail.com",
     license='Apache Software License',
-    install_requires=[ 'aiohttp>=3.7.0' ],
+    install_requires=[ 'aiohttp>=3.7.0', 'boto3>=1.17' ],
     keywords=[ 'rinnai', 'home automation', 'water heater' ],
     packages=[ 'aiorinnai' ],
     zip_safe=True,
