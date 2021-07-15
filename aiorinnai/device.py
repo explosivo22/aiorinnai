@@ -48,6 +48,11 @@ class Device:  # pylint: disable=too-few-public-methods
 
             return await self._request("patch", f"https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow", headers=self.headers, data=data)
 
+    async def do_maintenance_retrieval(self, thing_name: str) -> None:
+        data = '{"do_maintenance_retrieval":true}'
+
+        return await self._request("patch", f"https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow", headers=self.headers, data=data)
+
 
     async def start_recirculation(self, user_uuid: str, device_id: str, duration: int, additional_params={}) -> None:
         """start recirculation on the specified device"""
