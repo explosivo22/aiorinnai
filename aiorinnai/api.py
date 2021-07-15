@@ -28,9 +28,8 @@ class API(object):
         self._session: ClientSession = session
         self.token = {}
 
-        self.device: Device = Device(self._request)
-
-         # These endpoints will get instantiated post-authentication:
+        # These endpoints will get instantiated post-authentication:
+        self.device: Optional[Device] = None
         self.user: Optional[User] = None
 
     async def _request(self, method: str, url: str, **kwargs) -> dict:
@@ -69,6 +68,9 @@ class API(object):
                      client_id=CLIENT_ID, pool_region=POOL_REGION)
 
         await self._store_token(await aws.authenticate_user())
+
+        if not self.device:
+            self.device = Device(self._request, self.token.get("IdToken"))
 
         if not self.user:
             self.user = User(self._request, self._username)
