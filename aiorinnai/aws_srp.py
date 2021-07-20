@@ -1,5 +1,5 @@
 """
-from https://github.com/capless/warrant/blob/master/warrant/aws_srp.py
+from https://github.com/errietta/mandate/blob/master/mandate/aws_srp.py
 
 as of 29 June 2021
 
@@ -16,7 +16,7 @@ import hashlib
 import hmac
 import re
 
-import boto3
+import aioboto3
 import os
 import six
 
@@ -120,7 +120,7 @@ class AWSSRP(object):
         self.pool_id = pool_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.client = client if client else boto3.client('cognito-idp', region_name=pool_region)
+        self.client = client if client else aioboto3.client('cognito-idp', region_name=pool_region)
         self.big_n = hex_to_long(n_hex)
         self.g = hex_to_long(g_hex)
         self.k = hex_to_long(hex_hash('00' + n_hex + '0' + g_hex))
@@ -211,54 +211,67 @@ class AWSSRP(object):
                 self.get_secret_hash(self.username, self.client_id, self.client_secret)})
         return response
 
-    def authenticate_user(self, client=None):
+    async def authenticate_user(self, client=None):
         boto_client = self.client or client
         auth_params = self.get_auth_params()
-        response = boto_client.initiate_auth(
-            AuthFlow='USER_SRP_AUTH',
-            AuthParameters=auth_params,
-            ClientId=self.client_id
-        )
-        if response['ChallengeName'] == self.PASSWORD_VERIFIER_CHALLENGE:
-            challenge_response = self.process_challenge(response['ChallengeParameters'])
-            tokens = boto_client.respond_to_auth_challenge(
-                ClientId=self.client_id,
-                ChallengeName=self.PASSWORD_VERIFIER_CHALLENGE,
-                ChallengeResponses=challenge_response)
 
-            if tokens.get('ChallengeName') == self.NEW_PASSWORD_REQUIRED_CHALLENGE:
-                raise ForceChangePasswordException('Change password before authenticating')
+        async with boto_client as client:
+            response = await client.initiate_auth(
+                AuthFlow='USER_SRP_AUTH',
+                AuthParameters=auth_params,
+                ClientId=self.client_id
+            )
+            if response['ChallengeName'] == self.PASSWORD_VERIFIER_CHALLENGE:
+                challenge_response = self.process_challenge(
+                    response['ChallengeParameters'])
 
-            return tokens
-        else:
-            raise NotImplementedError('The %s challenge is not supported' % response['ChallengeName'])
-
-    def set_new_password_challenge(self, new_password, client=None):
-        boto_client = self.client or client
-        auth_params = self.get_auth_params()
-        response = boto_client.initiate_auth(
-            AuthFlow='USER_SRP_AUTH',
-            AuthParameters=auth_params,
-            ClientId=self.client_id
-        )
-        if response['ChallengeName'] == self.PASSWORD_VERIFIER_CHALLENGE:
-            challenge_response = self.process_challenge(response['ChallengeParameters'])
-            tokens = boto_client.respond_to_auth_challenge(
-                ClientId=self.client_id,
-                ChallengeName=self.PASSWORD_VERIFIER_CHALLENGE,
-                ChallengeResponses=challenge_response)
-
-            if tokens['ChallengeName'] == self.NEW_PASSWORD_REQUIRED_CHALLENGE:
-                challenge_response = {
-                    'USERNAME': auth_params['USERNAME'],
-                    'NEW_PASSWORD': new_password
-                }
-                new_password_response = boto_client.respond_to_auth_challenge(
+                tokens = await client.respond_to_auth_challenge(
                     ClientId=self.client_id,
-                    ChallengeName=self.NEW_PASSWORD_REQUIRED_CHALLENGE,
-                    Session=tokens['Session'],
+                    ChallengeName=self.PASSWORD_VERIFIER_CHALLENGE,
                     ChallengeResponses=challenge_response)
-                return new_password_response
-            return tokens
-        else:
-            raise NotImplementedError('The %s challenge is not supported' % response['ChallengeName'])
+
+                if tokens.get('ChallengeName') == \
+                   self.NEW_PASSWORD_REQUIRED_CHALLENGE:
+                    raise ForceChangePasswordException
+                    ('Change password before authenticating')
+
+                return tokens
+            else:
+                raise NotImplementedError('The %s challenge is not supported'
+                                          % response['ChallengeName'])
+
+    async def set_new_password_challenge(self, new_password, client=None):
+        boto_client = self.client or client
+        auth_params = self.get_auth_params()
+
+        async with boto_client as client:
+            response = await client.initiate_auth(
+                AuthFlow='USER_SRP_AUTH',
+                AuthParameters=auth_params,
+                ClientId=self.client_id
+            )
+            if response['ChallengeName'] == self.PASSWORD_VERIFIER_CHALLENGE:
+                challenge_response = self.process_challenge(
+                    response['ChallengeParameters'])
+                tokens = await client.respond_to_auth_challenge(
+                    ClientId=self.client_id,
+                    ChallengeName=self.PASSWORD_VERIFIER_CHALLENGE,
+                    ChallengeResponses=challenge_response)
+
+                if tokens['ChallengeName'] == \
+                   self.NEW_PASSWORD_REQUIRED_CHALLENGE:
+                    challenge_response = {
+                        'USERNAME': auth_params['USERNAME'],
+                        'NEW_PASSWORD': new_password
+                    }
+                    new_password_response = await\
+                        client.respond_to_auth_challenge(
+                            ClientId=self.client_id,
+                            ChallengeName=self.NEW_PASSWORD_REQUIRED_CHALLENGE,
+                            Session=tokens['Session'],
+                            ChallengeResponses=challenge_response)
+                    return new_password_response
+                return tokens
+            else:
+                raise NotImplementedError('The %s challenge is not supported'
+                                          % response['ChallengeName'])
