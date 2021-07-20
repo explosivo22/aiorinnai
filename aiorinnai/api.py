@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, time
 from typing import Optional
 
 from aiohttp import ClientSession, ClientTimeout
-from aiohttp.client_exceptions import ClientError, ServerTimeoutError
+from aiohttp.client_exceptions import ClientError, ClientResponseError, ClientConnectorError, ServerConnectionError, ClientPayloadError
 
 from .errors import RequestError
 from .device import Device
@@ -53,6 +53,14 @@ class API(object):
                 resp.raise_for_status()
                 return data
 
+        except ClientResponseError as err:
+            raise RequestError(f"There was a response error while requesting {url}: {err}") from err
+        except ClientConnectorError as err:
+            raise RequestError(f"There was a client connection error while requesting {url}: {err}") from err
+        except ServerConnectionError as err:
+            raise RequestError(f"There was a server connection error while requesting {url}: {err}") from err
+        except ClientPayloadError as err:
+            raise RequestError(f"There was a client payload error while requesting {url}: {err}") from err
         except ClientError as err:
             raise RequestError(f"There was the following error while requesting {url}: {err}") from err
         finally:
