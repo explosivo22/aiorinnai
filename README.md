@@ -5,7 +5,7 @@
 
 Python library for communicating with the [Rinnai Control-R Water Heaters and control devices](https://www.rinnai.us/tankless-water-heater/accessories/wifi) via the Rinnai Control-R cloud API.
 
-***NOTICE***
+***WARNING***
 * This library only works if you have migrated to the Rinnai 2.0 app.  This will require a firmware update to your Control-R module.
 * [IOS](https://apps.apple.com/us/app/rinnai-control-r-2-0/id1180734911?app=itunes&ign-mpt=uo%3D4)
 * [Android](https://play.google.com/store/apps/details?id=com.controlr)
@@ -23,7 +23,7 @@ NOTE:
 ## Installation
 
 ```
-pip install aiorinnai==0.2.1a11
+pip install aiorinnai==0.2.1a12
 ```
 
 ## Examples
