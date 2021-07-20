@@ -36,7 +36,7 @@ class API(object):
         """Make a request against the API."""
 
         if self.token.get('expires_at') and datetime.now() >= self.token.get('expires_at', 0):
-            LOGGER .info("Requesting new access token to replace expired one")
+            LOGGER.info("Requesting new access token to replace expired one")
 
             await self._refresh_token()
 

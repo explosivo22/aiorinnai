@@ -1,5 +1,7 @@
 """Constants used by RinnaiWaterHeater"""
 
+import logging
+
 LOGGER = logging.getLogger('aiorinnai')
 
 DEFAULT_AUTH_HEADERS = {
