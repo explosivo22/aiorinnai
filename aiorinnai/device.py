@@ -1,7 +1,7 @@
 """Define /device endpoints."""
 from typing import Awaitable, Callable
 
-from .const import GET_DEVICE_PAYLOAD, GET_PAYLOAD_HEADERS, COMMAND_URL, COMMAND_HEADERS
+from .const import GET_DEVICE_PAYLOAD, GET_PAYLOAD_HEADERS, COMMAND_URL, COMMAND_HEADERS, SHADOW_ENDPOINT
 
 
 class Device:  # pylint: disable=too-few-public-methods
@@ -58,61 +58,27 @@ class Device:  # pylint: disable=too-few-public-methods
 
         return await self._request("post", COMMAND_URL, data=data, headers=COMMAND_HEADERS)
 
+    async def _set_shadow(self, dev, attribute, value):
+        data = {
+            'user': dev['user_uuid'],
+            'thing': dev['thing_name'],
+            'attribute': attribute,
+            'value': value
+        }
+        headers = {
+            'User-Agent': 'okhttp/3.12.1'
+        }
+        r = await self._request('post',SHADOW_ENDPOINT, data=data, headers=headers)
+        return r
 
-    async def start_recirculation(self, user_uuid: str, device_id: str, duration: int, additional_params={}) -> None:
-        """start recirculation on the specified device"""
+    async def set_temperature(self, dev, temp: int):
+        await self._set_shadow(dev, 'set_priority_status', 'true')
+        return await self._set_shadow(dev, 'set_domestic_temperature', str(temp))
 
-        payload = "user=%s&thing=%s&attribute=set_priority_status&value=true" % (user_uuid, device_id)
+    async def stop_recirculation(self, dev):
+        return await self._set_shadow(dev, 'set_recirculation_enabled', 'false')
 
-        await self._request(
-            "post",
-            COMMAND_URL,
-            data=payload,
-            headers=COMMAND_HEADERS
-        )
-
-        payload = "user=%s&thing=%s&attribute=recirculation_duration&value=%s" % (user_uuid, device_id, duration)
-        await self._request(
-            "post",
-            COMMAND_URL,
-            data=payload,
-            headers=COMMAND_HEADERS
-        )
-
-        payload = "user=%s&thing=%s&attribute=set_recirculation_enabled&value=true" % (user_uuid, device_id)
-        await self._request(
-            "post",
-            COMMAND_URL,
-            data=payload,
-            headers=COMMAND_HEADERS
-        )
-
-        return True
-
-    async def stop_recirculation(self, user_uuid: str, device_id: str) -> None:
-        payload = "user=%s&thing=%s&attribute=set_recirculation_enabled&value=false" % (user_uuid, device_id)
-
-        await self._request(
-            "post",
-            COMMAND_URL,
-            data=payload,
-            headers=COMMAND_HEADERS
-        )
-
-        return True
-
-    async def set_temperature(self, user_uuid: str, device_id: str, temperature: int) -> None:
-        """set the temperature of the hot water heater"""
-
-        #check if the temperature is a multiple of 5. Rinnai only takes temperatures this way
-        if temperature % 5 == 0:
-            payload="user=%s&thing=%s&attribute=set_domestic_temperature&value=%s" % (user_uuid, device_id, temperature)
-
-            await self._request(
-                "post",
-                COMMAND_URL,
-                data=payload,
-                headers=COMMAND_HEADERS
-            )
-
-        return True
+    async def start_recirculation(self, dev, duration: int):
+        await self._set_shadow(dev, 'set_priority_status', 'true')
+        await self._set_shadow(dev, 'recirculation_duration', str(duration))
+        return await self._set_shadow(dev, 'set_recirculation_enabled', 'true')
