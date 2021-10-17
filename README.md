@@ -49,18 +49,14 @@ async def main() -> None:
 
     #Start Recirculation
     #Last variable is duration in minutes
-    start_recirculation = await api.device.start_recirculation(user_info["id"], first_device_id, 5)
-
-    print(start_recirculation)
+    start_recirculation = await api.device.start_recirculation(device_info['data']['getDevices'], 5)
 
     #Stop Recirculation
-    stop_recirculation = await api.device.stop_recirculation(user_info["id"], first_device_id)
-
-    print(stop_recirculation)
+    stop_recirculation = await api.device.stop_recirculation(device_info['data']['getDevices'])
 
     #Set Temperature
     #Last variable is the temperature in increments of 5
-    set_temperature = await api.device.set_temperature(user_info["id"], first_device_id, 130)
+    set_temperature = await api.device.set_temperature(device_info['data']['getDevices'], 130)
 
 
 asyncio.run(main())
