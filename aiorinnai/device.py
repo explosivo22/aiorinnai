@@ -53,11 +53,6 @@ class Device:  # pylint: disable=too-few-public-methods
 
         return await self._request("patch", f"https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow", headers=self.headers, data=data) 
 
-    async def do_maintenance_retrieval(self, user_uuid: str, thing_name: str) -> None:
-        data = "user=%s&thing=%s&attribute=do_maintenance_retrieval&value=true" % (user_uuid, thing_name)
-
-        return await self._request("post", COMMAND_URL, data=data, headers=COMMAND_HEADERS)
-
     async def _set_shadow(self, dev, attribute, value):
         data = {
             'user': dev['user_uuid'],
@@ -82,3 +77,6 @@ class Device:  # pylint: disable=too-few-public-methods
         await self._set_shadow(dev, 'set_priority_status', 'true')
         await self._set_shadow(dev, 'recirculation_duration', str(duration))
         return await self._set_shadow(dev, 'set_recirculation_enabled', 'true')
+
+    async def do_maintenance_retrieval(self, dev):
+        return self._set_shadow(dev, 'do_maintenance_retrieval', 'true')
