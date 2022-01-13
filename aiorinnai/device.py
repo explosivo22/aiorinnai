@@ -79,4 +79,4 @@ class Device:  # pylint: disable=too-few-public-methods
         return await self._set_shadow(dev, 'set_recirculation_enabled', 'true')
 
     async def do_maintenance_retrieval(self, dev):
-        return self._set_shadow(dev, 'do_maintenance_retrieval', 'true')
+        return await self._set_shadow(dev, 'do_maintenance_retrieval', 'true')
