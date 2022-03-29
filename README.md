@@ -23,7 +23,7 @@ NOTE:
 ## Installation
 
 ```
-pip install aiorinnai==0.2.5
+pip install aiorinnai==0.2.6
 ```
 
 ## Examples
