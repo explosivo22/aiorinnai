@@ -100,7 +100,7 @@ class API(object):
         # NOTE: If Rinnai ever supports 2FA, that would be a reason to use
         # the refresh token instead of re-running the password verifier, but
         # that would also require other changes to this file.
-        self._get_initial_token()
+        await self._get_initial_token()
 
     @property
     def is_connected(self):
