@@ -120,7 +120,11 @@ class AWSSRP(object):
         self.pool_id = pool_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.client = client if client else aioboto3.client('cognito-idp', region_name=pool_region)
+        self.boto_session = aioboto3.Session()
+        self.client = client if client else self.boto_session.client(
+            'cognito-idp',
+            region_name=pool_region
+        )
         self.big_n = hex_to_long(n_hex)
         self.g = hex_to_long(g_hex)
         self.k = hex_to_long(hex_hash('00' + n_hex + '0' + g_hex))
