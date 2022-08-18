@@ -47,8 +47,14 @@ class API(object):
         else:
             session = ClientSession(timeout=ClientTimeout(total=120))
 
+        if self.token.get('IdToken'):
+            kwargs["headers"]["Authorization"] = "Bearer {}".format(self.token.get('IdToken'))
+
         try:
             async with session.request(method, url, **kwargs) as resp:
+                text = await resp.text()
+                if text == "success":
+                    return text
                 data: dict = await resp.json(content_type=None)
                 resp.raise_for_status()
                 return data
@@ -78,7 +84,7 @@ class API(object):
         await self._store_token(await aws.authenticate_user())
 
         if not self.device:
-            self.device = Device(self._request, self.token.get("IdToken"))
+            self.device = Device(self._request)
 
         if not self.user:
             self.user = User(self._request, self._username)
