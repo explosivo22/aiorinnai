@@ -36,13 +36,25 @@ class Device:  # pylint: disable=too-few-public-methods
         return r
 
     async def set_temperature(self, dev, temp: int):
-        return await self._set_shadow(dev, {'set_priority_status': True, 'set_domestic_temperature': temp})
+        return await self._set_shadow(dev, {"set_priority_status": True, "set_domestic_temperature": temp})
 
     async def stop_recirculation(self, dev):
-        return await self._set_shadow(dev, {'set_recirculation_enabled': False})
+        return await self._set_shadow(dev, {"set_recirculation_enabled": False})
 
     async def start_recirculation(self, dev, duration: int):
         return await self._set_shadow(dev, {"recirculation_duration": str(duration), "set_recirculation_enabled": True})
 
     async def do_maintenance_retrieval(self, dev):
-        return await self._set_shadow(dev, {'do_maintenance_retrieval': True})
+        return await self._set_shadow(dev, {"do_maintenance_retrieval": True})
+
+    async def enable_vacation_mode(self, dev):
+        return await self._set_shadow(dev, {"schedule_holiday": True})
+
+    async def disable_vacation_mode(self, dev):
+        return await self._set_shadow(dev, {"schedule_holiday": False, "schedule_enabled": True})
+
+    async def turn_off(self, dev):
+        return await self._set_shadow(dev, {"set_operation_enabled": False})
+
+    async def turn_on(self, dev):
+        return await self._set_shadow(dev, {"set_operation_enabled": True})
