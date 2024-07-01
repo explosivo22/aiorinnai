@@ -13,7 +13,7 @@ except FileNotFoundError:
 
 setup(
     name="aiorinnai",
-    version="0.3.1",
+    version="0.3.2",
     description="Python interface for Rinnai Control-R API",
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -21,7 +21,7 @@ setup(
     author="Brad Barbour",
     author_email="barbourbj@gmail.com",
     license='Apache Software License',
-    install_requires=[ 'aiohttp>=3.7.0', 'aioboto3==9.4.0' ],
+    install_requires=[ 'aiohttp>=3.7.0', 'aioboto3==10.4.0' ],
     keywords=[ 'rinnai', 'home automation', 'water heater' ],
     packages=[ 'aiorinnai' ],
     zip_safe=True,
