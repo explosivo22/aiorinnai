@@ -4,7 +4,7 @@ import logging
 
 LOGGER = logging.getLogger('aiorinnai')
 
-POOL_ID = 'cognitor-idp.us-east-1.amazonaws.com/us-east-1_OcwpRQbMM'
+POOL_ID = 'us-east-1_OcwpRQbMM'
 CLIENT_ID = '5ghq3i6k4p9s7dfu34ckmec91'
 POOL_REGION = 'us-east-1'
 
