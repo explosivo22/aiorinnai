@@ -192,9 +192,11 @@ class API(object):
 
                 raise
 
-    async def async_renew_access_token(self, access_token: str = None, refresh_token: str = None) -> None:
+    async def async_renew_access_token(self,email: str = None, access_token: str = None, refresh_token: str = None) -> None:
         if self.loop is None:
             self.loop = asyncio.get_event_loop()
+        if email is not None:
+            self.username = email
         if access_token is not None:
             self.access_token = access_token
         if refresh_token is not None:
