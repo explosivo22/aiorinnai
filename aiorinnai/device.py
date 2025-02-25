@@ -21,10 +21,18 @@ class Device:  # pylint: disable=too-few-public-methods
         """
         payload = GET_DEVICE_PAYLOAD % (device_id)
 
-        return await self._request("post", "https://s34ox7kri5dsvdr43bfgp6qh6i.appsync-api.us-east-1.amazonaws.com/graphql",data=payload,headers=GET_PAYLOAD_HEADERS)
+        device_info: dict = await self._request(
+            "post",
+            "https://s34ox7kri5dsvdr43bfgp6qh6i.appsync-api.us-east-1.amazonaws.com/graphql",
+            data=payload,
+            headers=GET_PAYLOAD_HEADERS
+        )
+
+        return device_info
 
     async def _set_shadow(self, dev, settings: dict):
         data = json.dumps(settings)
+        print(data)
 
         headers = {
             'User-Agent': 'okhttp/3.12.1',
