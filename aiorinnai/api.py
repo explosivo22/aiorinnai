@@ -152,12 +152,13 @@ class API(object):
                 self.device = Device(self._request)
 
         if not self.user:
-            self.user = User(self._request)
+            self.user = User(self._request, self.username)
 
         return None
 
     async def async_login(self, email: str, password: str = None, access_token: str = None, refresh_token: str = None) -> None:
         self.loop = asyncio.get_event_loop()
+        self.username = email
 
         try:
             cognito = await self.loop.run_in_executor(None, partial(self._create_cognito_client, username=email),)
