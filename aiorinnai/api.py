@@ -120,6 +120,9 @@ class API(object):
 
         try:
             async with session.request(method, url, **kwargs) as resp:
+                text = await resp.text()
+                if text == "success":
+                    return text
                 data: dict = await resp.json(content_type=None)
                 resp.raise_for_status()
                 return data
