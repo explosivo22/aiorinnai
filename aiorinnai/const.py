@@ -1,20 +1,543 @@
 """Constants used by RinnaiWaterHeater"""
+from __future__ import annotations
 
+import json
 import logging
+from typing import Any
 
 LOGGER = logging.getLogger('aiorinnai')
 
-POOL_ID = 'cognitor-idp.us-east-1.amazonaws.com/us-east-1_OcwpRQbMM'
+POOL_ID = 'us-east-1_OcwpRQbMM'
 CLIENT_ID = '5ghq3i6k4p9s7dfu34ckmec91'
 POOL_REGION = 'us-east-1'
 
 GRAPHQL_ENDPOINT = 'https://s34ox7kri5dsvdr43bfgp6qh6i.appsync-api.us-east-1.amazonaws.com/graphql'
 SHADOW_ENDPOINT = 'https://d1coipyopavzuf.cloudfront.net/api/device_shadow/input'
-SHADOW_ENDPOINT_PATCH = 'https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/%s/shadow'
+SHADOW_ENDPOINT_PATCH = 'https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow'
 
-GET_USER_PAYLOAD = ("{\r\n    \"query\": \"query GetUserByEmail($email: String, $sortDirection: ModelSortDirection, $filter: ModelRinnaiUserFilterInput, $limit: Int, $nextToken: String) {\\n  getUserByEmail(email: $email, sortDirection: $sortDirection, filter: $filter, limit: $limit, nextToken: $nextToken) {\\n    items {\\n      id\\n      name\\n      email\\n      admin\\n      approved\\n      confirmed\\n      aws_confirm\\n      imported\\n      country\\n      city\\n      state\\n      street\\n      zip\\n      company\\n      username\\n      firstname\\n      lastname\\n      st_accesstoken\\n      st_refreshtoken\\n      phone_country_code\\n      phone\\n      primary_contact\\n      terms_accepted\\n      terms_accepted_at\\n      terms_email_sent_at\\n      terms_token\\n      roles\\n      createdAt\\n      updatedAt\\n      devices {\\n        items {\\n          id\\n          thing_name\\n          device_name\\n          dealer_uuid\\n          city\\n          state\\n          street\\n          zip\\n          country\\n          firmware\\n          model\\n          dsn\\n          user_uuid\\n          connected_at\\n          key\\n          lat\\n          lng\\n          address\\n          vacation\\n          createdAt\\n          updatedAt\\n          activity {\\n            clientId\\n            serial_id\\n            timestamp\\n            eventType\\n          }\\n          shadow {\\n            heater_serial_number\\n            ayla_dsn\\n            rinnai_registered\\n            do_maintenance_retrieval\\n            model\\n            module_log_level\\n            set_priority_status\\n            set_recirculation_enable\\n            set_recirculation_enabled\\n            set_domestic_temperature\\n            set_operation_enabled\\n            schedule\\n            schedule_holiday\\n            schedule_enabled\\n            do_zigbee\\n            timezone\\n            timezone_encoded\\n            priority_status\\n            recirculation_enabled\\n            recirculation_duration\\n            lock_enabled\\n            operation_enabled\\n            module_firmware_version\\n            recirculation_not_configured\\n            maximum_domestic_temperature\\n            minimum_domestic_temperature\\n            createdAt\\n            updatedAt\\n          }\\n          monitoring {\\n            serial_id\\n            dealer_uuid\\n            user_uuid\\n            request_state\\n            createdAt\\n            updatedAt\\n            dealer {\\n              id\\n              name\\n              email\\n              admin\\n              approved\\n              confirmed\\n              aws_confirm\\n              imported\\n              country\\n              city\\n              state\\n              street\\n              zip\\n              company\\n              username\\n              firstname\\n              lastname\\n              st_accesstoken\\n              st_refreshtoken\\n              phone_country_code\\n              phone\\n              primary_contact\\n              terms_accepted\\n              terms_accepted_at\\n              terms_email_sent_at\\n              terms_token\\n              roles\\n              createdAt\\n              updatedAt\\n            }\\n          }\\n          schedule {\\n            items {\\n              id\\n              serial_id\\n              name\\n              schedule\\n              days\\n              times\\n              schedule_date\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n          info {\\n            serial_id\\n            ayla_dsn\\n            name\\n            domestic_combustion\\n            domestic_temperature\\n            wifi_ssid\\n            wifi_signal_strength\\n            wifi_channel_frequency\\n            local_ip\\n            public_ip\\n            ap_mac_addr\\n            recirculation_temperature\\n            recirculation_duration\\n            zigbee_inventory\\n            zigbee_status\\n            lime_scale_error\\n            mc__total_calories\\n            type\\n            unix_time\\n            m01_water_flow_rate_raw\\n            do_maintenance_retrieval\\n            aft_tml\\n            tot_cli\\n            unt_mmp\\n            aft_tmh\\n            bod_tmp\\n            m09_fan_current\\n            m02_outlet_temperature\\n            firmware_version\\n            bur_thm\\n            tot_clm\\n            exh_tmp\\n            m05_fan_frequency\\n            thermal_fuse_temperature\\n            m04_combustion_cycles\\n            hardware_version\\n            m11_heat_exchanger_outlet_temperature\\n            bur_tmp\\n            tot_wrl\\n            m12_bypass_servo_position\\n            m08_inlet_temperature\\n            m20_pump_cycles\\n            module_firmware_version\\n            error_code\\n            warning_code\\n            internal_temperature\\n            tot_wrm\\n            unknown_b\\n            rem_idn\\n            m07_water_flow_control_position\\n            operation_hours\\n            thermocouple\\n            tot_wrh\\n            recirculation_capable\\n            maintenance_list\\n            tot_clh\\n            temperature_table\\n            m19_pump_hours\\n            oem_host_version\\n            schedule_a_name\\n            zigbee_pairing_count\\n            schedule_c_name\\n            schedule_b_name\\n            model\\n            schedule_d_name\\n            total_bath_fill_volume\\n            dt\\n            createdAt\\n            updatedAt\\n          }\\n          errorLogs {\\n            items {\\n              id\\n              serial_id\\n              ayla_dsn\\n              name\\n              lime_scale_error\\n              m01_water_flow_rate_raw\\n              m02_outlet_temperature\\n              m04_combustion_cycles\\n              m08_inlet_temperature\\n              error_code\\n              warning_code\\n              operation_hours\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n          registration {\\n            items {\\n              serial\\n              dealer_id\\n              device_id\\n              user_uuid\\n              model\\n              gateway_dsn\\n              application_type\\n              recirculation_type\\n              install_datetime\\n              registration_type\\n              dealer_user_email\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n        }\\n        nextToken\\n      }\\n    }\\n    nextToken\\n  }\\n}\\n\",\r\n    \"variables\": {\r\n        \"email\": \"%s\"\r\n    }\r\n}")
 
-GET_DEVICE_PAYLOAD = "{\r\n    \"query\": \"query GetDevice($id: ID!){\\n  getDevice(id: $id){\\n    id\\n          thing_name\\n          device_name\\n          dealer_uuid\\n          city\\n          state\\n          street\\n          zip\\n          country\\n          firmware\\n          model\\n          dsn\\n          user_uuid\\n          connected_at\\n          key\\n          lat\\n          lng\\n          address\\n          vacation\\n          createdAt\\n          updatedAt\\n          activity {\\n            clientId\\n            serial_id\\n            timestamp\\n            eventType\\n          }\\n          shadow {\\n            heater_serial_number\\n            ayla_dsn\\n            rinnai_registered\\n            do_maintenance_retrieval\\n            model\\n            module_log_level\\n            set_priority_status\\n            set_recirculation_enable\\n            set_recirculation_enabled\\n            set_domestic_temperature\\n            set_operation_enabled\\n            schedule\\n            schedule_holiday\\n            schedule_enabled\\n            do_zigbee\\n            timezone\\n            timezone_encoded\\n            priority_status\\n            recirculation_enabled\\n            recirculation_duration\\n            lock_enabled\\n            operation_enabled\\n            module_firmware_version\\n            recirculation_not_configured\\n            maximum_domestic_temperature\\n            minimum_domestic_temperature\\n            createdAt\\n            updatedAt\\n          }\\n          monitoring {\\n            serial_id\\n            dealer_uuid\\n            user_uuid\\n            request_state\\n            createdAt\\n            updatedAt\\n            dealer {\\n              id\\n              name\\n              email\\n              admin\\n              approved\\n              confirmed\\n              aws_confirm\\n              imported\\n              country\\n              city\\n              state\\n              street\\n              zip\\n              company\\n              username\\n              firstname\\n              lastname\\n              st_accesstoken\\n              st_refreshtoken\\n              phone_country_code\\n              phone\\n              primary_contact\\n              terms_accepted\\n              terms_accepted_at\\n              terms_email_sent_at\\n              terms_token\\n              roles\\n              createdAt\\n              updatedAt\\n            }\\n          }\\n          schedule {\\n            items {\\n              id\\n              serial_id\\n              name\\n              schedule\\n              days\\n              times\\n              schedule_date\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n          info {\\n            serial_id\\n            ayla_dsn\\n            name\\n            domestic_combustion\\n            domestic_temperature\\n            wifi_ssid\\n            wifi_signal_strength\\n            wifi_channel_frequency\\n            local_ip\\n            public_ip\\n            ap_mac_addr\\n            recirculation_temperature\\n            recirculation_duration\\n            zigbee_inventory\\n            zigbee_status\\n            lime_scale_error\\n            mc__total_calories\\n            type\\n            unix_time\\n            m01_water_flow_rate_raw\\n            do_maintenance_retrieval\\n            aft_tml\\n            tot_cli\\n            unt_mmp\\n            aft_tmh\\n            bod_tmp\\n            m09_fan_current\\n            m02_outlet_temperature\\n            firmware_version\\n            bur_thm\\n            tot_clm\\n            exh_tmp\\n            m05_fan_frequency\\n            thermal_fuse_temperature\\n            m04_combustion_cycles\\n            hardware_version\\n            m11_heat_exchanger_outlet_temperature\\n            bur_tmp\\n            tot_wrl\\n            m12_bypass_servo_position\\n            m08_inlet_temperature\\n            m20_pump_cycles\\n            module_firmware_version\\n            error_code\\n            warning_code\\n            internal_temperature\\n            tot_wrm\\n            unknown_b\\n            rem_idn\\n            m07_water_flow_control_position\\n            operation_hours\\n            thermocouple\\n            tot_wrh\\n            recirculation_capable\\n            maintenance_list\\n            tot_clh\\n            temperature_table\\n            m19_pump_hours\\n            oem_host_version\\n            schedule_a_name\\n            zigbee_pairing_count\\n            schedule_c_name\\n            schedule_b_name\\n            model\\n            schedule_d_name\\n            total_bath_fill_volume\\n            dt\\n            createdAt\\n            updatedAt\\n          }\\n          errorLogs {\\n            items {\\n              id\\n              serial_id\\n              ayla_dsn\\n              name\\n              lime_scale_error\\n              m01_water_flow_rate_raw\\n              m02_outlet_temperature\\n              m04_combustion_cycles\\n              m08_inlet_temperature\\n              error_code\\n              warning_code\\n              operation_hours\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n          registration {\\n            items {\\n              serial\\n              dealer_id\\n              device_id\\n              user_uuid\\n              model\\n              gateway_dsn\\n              application_type\\n              recirculation_type\\n              install_datetime\\n              registration_type\\n              dealer_user_email\\n              active\\n              createdAt\\n              updatedAt\\n            }\\n            nextToken\\n          }\\n        }\\n}\\n\",\r\n    \"variables\": {\r\n        \"id\": \"%s\"\r\n    }\r\n}"
+def build_graphql_payload(query: str, variables: dict[str, Any]) -> str:
+    """Build a GraphQL payload with proper JSON serialization.
+
+    This prevents GraphQL injection by properly escaping variables
+    instead of using string interpolation.
+
+    Args:
+        query: The GraphQL query string.
+        variables: Dictionary of variables to pass to the query.
+
+    Returns:
+        JSON-encoded payload string ready for API request.
+    """
+    return json.dumps({"query": query, "variables": variables})
+
+
+# GraphQL query for getting user by email
+GET_USER_QUERY = """
+query GetUserByEmail(
+    $email: String,
+    $sortDirection: ModelSortDirection,
+    $filter: ModelRinnaiUserFilterInput,
+    $limit: Int,
+    $nextToken: String
+) {
+  getUserByEmail(
+    email: $email,
+    sortDirection: $sortDirection,
+    filter: $filter,
+    limit: $limit,
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      name
+      email
+      admin
+      approved
+      confirmed
+      aws_confirm
+      imported
+      country
+      city
+      state
+      street
+      zip
+      company
+      username
+      firstname
+      lastname
+      st_accesstoken
+      st_refreshtoken
+      phone_country_code
+      phone
+      primary_contact
+      terms_accepted
+      terms_accepted_at
+      terms_email_sent_at
+      terms_token
+      roles
+      createdAt
+      updatedAt
+      devices {
+        items {
+          id
+          thing_name
+          device_name
+          dealer_uuid
+          city
+          state
+          street
+          zip
+          country
+          firmware
+          model
+          dsn
+          user_uuid
+          connected_at
+          key
+          lat
+          lng
+          address
+          vacation
+          createdAt
+          updatedAt
+          activity {
+            clientId
+            serial_id
+            timestamp
+            eventType
+          }
+          shadow {
+            heater_serial_number
+            ayla_dsn
+            rinnai_registered
+            do_maintenance_retrieval
+            model
+            module_log_level
+            set_priority_status
+            set_recirculation_enable
+            set_recirculation_enabled
+            set_domestic_temperature
+            set_operation_enabled
+            schedule
+            schedule_holiday
+            schedule_enabled
+            do_zigbee
+            timezone
+            timezone_encoded
+            priority_status
+            recirculation_enabled
+            recirculation_duration
+            lock_enabled
+            operation_enabled
+            module_firmware_version
+            recirculation_not_configured
+            maximum_domestic_temperature
+            minimum_domestic_temperature
+            createdAt
+            updatedAt
+          }
+          monitoring {
+            serial_id
+            dealer_uuid
+            user_uuid
+            request_state
+            createdAt
+            updatedAt
+            dealer {
+              id
+              name
+              email
+              admin
+              approved
+              confirmed
+              aws_confirm
+              imported
+              country
+              city
+              state
+              street
+              zip
+              company
+              username
+              firstname
+              lastname
+              st_accesstoken
+              st_refreshtoken
+              phone_country_code
+              phone
+              primary_contact
+              terms_accepted
+              terms_accepted_at
+              terms_email_sent_at
+              terms_token
+              roles
+              createdAt
+              updatedAt
+            }
+          }
+          schedule {
+            items {
+              id
+              serial_id
+              name
+              schedule
+              days
+              times
+              schedule_date
+              active
+              createdAt
+              updatedAt
+            }
+            nextToken
+          }
+          info {
+            serial_id
+            ayla_dsn
+            name
+            domestic_combustion
+            domestic_temperature
+            wifi_ssid
+            wifi_signal_strength
+            wifi_channel_frequency
+            local_ip
+            public_ip
+            ap_mac_addr
+            recirculation_temperature
+            recirculation_duration
+            zigbee_inventory
+            zigbee_status
+            lime_scale_error
+            mc__total_calories
+            type
+            unix_time
+            m01_water_flow_rate_raw
+            do_maintenance_retrieval
+            aft_tml
+            tot_cli
+            unt_mmp
+            aft_tmh
+            bod_tmp
+            m09_fan_current
+            m02_outlet_temperature
+            firmware_version
+            bur_thm
+            tot_clm
+            exh_tmp
+            m05_fan_frequency
+            thermal_fuse_temperature
+            m04_combustion_cycles
+            hardware_version
+            m11_heat_exchanger_outlet_temperature
+            bur_tmp
+            tot_wrl
+            m12_bypass_servo_position
+            m08_inlet_temperature
+            m20_pump_cycles
+            module_firmware_version
+            error_code
+            warning_code
+            internal_temperature
+            tot_wrm
+            unknown_b
+            rem_idn
+            m07_water_flow_control_position
+            operation_hours
+            thermocouple
+            tot_wrh
+            recirculation_capable
+            maintenance_list
+            tot_clh
+            temperature_table
+            m19_pump_hours
+            oem_host_version
+            schedule_a_name
+            zigbee_pairing_count
+            schedule_c_name
+            schedule_b_name
+            model
+            schedule_d_name
+            total_bath_fill_volume
+            dt
+            createdAt
+            updatedAt
+          }
+          errorLogs {
+            items {
+              id
+              serial_id
+              ayla_dsn
+              name
+              lime_scale_error
+              m01_water_flow_rate_raw
+              m02_outlet_temperature
+              m04_combustion_cycles
+              m08_inlet_temperature
+              error_code
+              warning_code
+              operation_hours
+              active
+              createdAt
+              updatedAt
+            }
+            nextToken
+          }
+          registration {
+            items {
+              serial
+              dealer_id
+              device_id
+              user_uuid
+              model
+              gateway_dsn
+              application_type
+              recirculation_type
+              install_datetime
+              registration_type
+              dealer_user_email
+              active
+              createdAt
+              updatedAt
+            }
+            nextToken
+          }
+        }
+        nextToken
+      }
+    }
+    nextToken
+  }
+}
+"""
+
+# GraphQL query for getting device by ID
+GET_DEVICE_QUERY = """
+query GetDevice($id: ID!) {
+  getDevice(id: $id) {
+    id
+    thing_name
+    device_name
+    dealer_uuid
+    city
+    state
+    street
+    zip
+    country
+    firmware
+    model
+    dsn
+    user_uuid
+    connected_at
+    key
+    lat
+    lng
+    address
+    vacation
+    createdAt
+    updatedAt
+    activity {
+      clientId
+      serial_id
+      timestamp
+      eventType
+    }
+    shadow {
+      heater_serial_number
+      ayla_dsn
+      rinnai_registered
+      do_maintenance_retrieval
+      model
+      module_log_level
+      set_priority_status
+      set_recirculation_enable
+      set_recirculation_enabled
+      set_domestic_temperature
+      set_operation_enabled
+      schedule
+      schedule_holiday
+      schedule_enabled
+      do_zigbee
+      timezone
+      timezone_encoded
+      priority_status
+      recirculation_enabled
+      recirculation_duration
+      lock_enabled
+      operation_enabled
+      module_firmware_version
+      recirculation_not_configured
+      maximum_domestic_temperature
+      minimum_domestic_temperature
+      createdAt
+      updatedAt
+    }
+    monitoring {
+      serial_id
+      dealer_uuid
+      user_uuid
+      request_state
+      createdAt
+      updatedAt
+      dealer {
+        id
+        name
+        email
+        admin
+        approved
+        confirmed
+        aws_confirm
+        imported
+        country
+        city
+        state
+        street
+        zip
+        company
+        username
+        firstname
+        lastname
+        st_accesstoken
+        st_refreshtoken
+        phone_country_code
+        phone
+        primary_contact
+        terms_accepted
+        terms_accepted_at
+        terms_email_sent_at
+        terms_token
+        roles
+        createdAt
+        updatedAt
+      }
+    }
+    schedule {
+      items {
+        id
+        serial_id
+        name
+        schedule
+        days
+        times
+        schedule_date
+        active
+        createdAt
+        updatedAt
+      }
+      nextToken
+    }
+    info {
+      serial_id
+      ayla_dsn
+      name
+      domestic_combustion
+      domestic_temperature
+      wifi_ssid
+      wifi_signal_strength
+      wifi_channel_frequency
+      local_ip
+      public_ip
+      ap_mac_addr
+      recirculation_temperature
+      recirculation_duration
+      zigbee_inventory
+      zigbee_status
+      lime_scale_error
+      mc__total_calories
+      type
+      unix_time
+      m01_water_flow_rate_raw
+      do_maintenance_retrieval
+      aft_tml
+      tot_cli
+      unt_mmp
+      aft_tmh
+      bod_tmp
+      m09_fan_current
+      m02_outlet_temperature
+      firmware_version
+      bur_thm
+      tot_clm
+      exh_tmp
+      m05_fan_frequency
+      thermal_fuse_temperature
+      m04_combustion_cycles
+      hardware_version
+      m11_heat_exchanger_outlet_temperature
+      bur_tmp
+      tot_wrl
+      m12_bypass_servo_position
+      m08_inlet_temperature
+      m20_pump_cycles
+      module_firmware_version
+      error_code
+      warning_code
+      internal_temperature
+      tot_wrm
+      unknown_b
+      rem_idn
+      m07_water_flow_control_position
+      operation_hours
+      thermocouple
+      tot_wrh
+      recirculation_capable
+      maintenance_list
+      tot_clh
+      temperature_table
+      m19_pump_hours
+      oem_host_version
+      schedule_a_name
+      zigbee_pairing_count
+      schedule_c_name
+      schedule_b_name
+      model
+      schedule_d_name
+      total_bath_fill_volume
+      dt
+      createdAt
+      updatedAt
+    }
+    errorLogs {
+      items {
+        id
+        serial_id
+        ayla_dsn
+        name
+        lime_scale_error
+        m01_water_flow_rate_raw
+        m02_outlet_temperature
+        m04_combustion_cycles
+        m08_inlet_temperature
+        error_code
+        warning_code
+        operation_hours
+        active
+        createdAt
+        updatedAt
+      }
+      nextToken
+    }
+    registration {
+      items {
+        serial
+        dealer_id
+        device_id
+        user_uuid
+        model
+        gateway_dsn
+        application_type
+        recirculation_type
+        install_datetime
+        registration_type
+        dealer_user_email
+        active
+        createdAt
+        updatedAt
+      }
+      nextToken
+    }
+  }
+}
+"""
 
 GET_PAYLOAD_HEADERS = {
     'x-amz-user-agent': 'aws-amplify/3.4.3 react-native',

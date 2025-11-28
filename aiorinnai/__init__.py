@@ -1,19 +1,77 @@
+"""aiorinnai - Async Python library for the Rinnai Control-R API.
+
+This library provides an async interface for authenticating with and
+controlling Rinnai water heaters via the Rinnai Control-R cloud service.
+
+Example:
+    ```python
+    import asyncio
+    from aiorinnai import API
+
+    async def main():
+        api = API()
+        await api.async_login("user@example.com", "password")
+
+        # Get user info with all devices
+        user_info = await api.user.get_info()
+
+        # Control a device
+        device = user_info["devices"]["items"][0]
+        await api.device.start_recirculation(device, duration=5)
+
+        await api.close()
+
+    asyncio.run(main())
+    ```
 """
-rinnaicontrolr -- Python client for the Rinnai API
 
-RinnaiWaterHeater provides methods to access and set water heater
-parameters: e.g.
-   wh = RinnaiWaterHeater('your_rinnai_app_email@email.com',
-                          'your_rinnai_app_password')
-   for device in wh.get_devices():
-      pass # device is a dictionary of parameters
-   wh.start_recirculation(...)
+from aiorinnai.api import API
+from aiorinnai.device import Device
+from aiorinnai.errors import (
+    AWS_EXCEPTIONS,
+    CloudError,
+    PasswordChangeRequired,
+    RequestError,
+    RinnaiError,
+    Unauthenticated,
+    UnknownError,
+    UserExists,
+    UserNotConfirmed,
+    UserNotFound,
+)
+from aiorinnai.types import (
+    APIResponse,
+    DeviceInfo,
+    ShadowData,
+    TemperatureUnit,
+    UserInfo,
+)
+from aiorinnai.user import User
 
-Important: The Rinnai API is severely rate limited. It seems to accept
-queries every 10 minutes or so, but not much more often.
-   
-"""
+__version__ = "0.5.0"
 
-from aiorinnai.api import async_get_api
-
-# we told you it was a simple API...
+__all__ = [
+    # Core classes
+    "API",
+    "Device",
+    "User",
+    # Type definitions
+    "APIResponse",
+    "DeviceInfo",
+    "ShadowData",
+    "TemperatureUnit",
+    "UserInfo",
+    # Base exceptions
+    "RinnaiError",
+    "RequestError",
+    # Cloud/Auth exceptions
+    "CloudError",
+    "Unauthenticated",
+    "UserNotFound",
+    "UserExists",
+    "UserNotConfirmed",
+    "PasswordChangeRequired",
+    "UnknownError",
+    # Utilities
+    "AWS_EXCEPTIONS",
+]
