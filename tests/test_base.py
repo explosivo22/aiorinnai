@@ -10,7 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aiohttp import ClientConnectorError, ClientResponseError, ClientSession
+from aiohttp import ClientConnectorError, ClientSession
 from aiohttp.client_reqrep import ConnectionKey
 
 from aiorinnai import (
@@ -20,7 +20,6 @@ from aiorinnai import (
     RequestError,
     TemperatureUnit,
     Unauthenticated,
-    UnknownError,
     User,
     UserNotFound,
 )
@@ -85,14 +84,6 @@ def mock_cognito() -> MagicMock:
     cognito.refresh_token = "mock_refresh_token"
     cognito.check_token.return_value = False  # Token is valid
     return cognito
-
-
-@pytest.fixture
-def mock_session() -> AsyncMock:
-    """Create a mock aiohttp ClientSession."""
-    session = AsyncMock(spec=ClientSession)
-    session.closed = False
-    return session
 
 
 class TestAPILogin:
@@ -202,7 +193,7 @@ class TestAPIRequest:
         """Test that transient connection errors trigger retries."""
         with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
             api = API()
-            api._retry_delay = 0.01  # Speed up test
+            api.retry_delay = 0.01  # Speed up test
             await api.async_login("test@example.com", "password")
 
             # Create a connection error
@@ -253,7 +244,7 @@ class TestAPIRequest:
         """Test that request fails after exhausting retries."""
         with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
             api = API()
-            api._retry_delay = 0.01  # Speed up test
+            api.retry_delay = 0.01  # Speed up test
             await api.async_login("test@example.com", "password")
 
             conn_key = ConnectionKey(
@@ -426,7 +417,7 @@ class TestSessionManagement:
             await api.async_login("test@example.com", "password")
 
             # Force internal session creation
-            session = api._get_session()
+            _ = api._get_session()
             assert api._owns_session is True
 
             await api.close()

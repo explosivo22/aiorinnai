@@ -246,11 +246,6 @@ class API:
                     f"Payload error while requesting {url}: {err}"
                 ) from err
 
-            except ClientError as err:
-                raise RequestError(
-                    f"Client error while requesting {url}: {err}"
-                ) from err
-
         # All retries exhausted
         raise RequestError(
             f"Request to {url} failed after {self.retry_count} attempts: {last_error}"
