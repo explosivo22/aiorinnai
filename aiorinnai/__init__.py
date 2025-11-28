@@ -39,6 +39,13 @@ from aiorinnai.errors import (
     UserNotConfirmed,
     UserNotFound,
 )
+from aiorinnai.types import (
+    APIResponse,
+    DeviceInfo,
+    ShadowData,
+    TemperatureUnit,
+    UserInfo,
+)
 from aiorinnai.user import User
 
 __version__ = "0.4.0a2"
@@ -48,6 +55,12 @@ __all__ = [
     "API",
     "Device",
     "User",
+    # Type definitions
+    "APIResponse",
+    "DeviceInfo",
+    "ShadowData",
+    "TemperatureUnit",
+    "UserInfo",
     # Base exceptions
     "RinnaiError",
     "RequestError",

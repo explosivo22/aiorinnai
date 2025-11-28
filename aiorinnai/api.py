@@ -46,6 +46,9 @@ DEFAULT_RETRY_MULTIPLIER = 2.0
 # Default request timeout in seconds
 DEFAULT_TIMEOUT = 30.0
 
+# Default executor timeout in seconds
+DEFAULT_EXECUTOR_TIMEOUT = 30.0
+
 # Exceptions that should trigger a retry
 RETRYABLE_EXCEPTIONS = (ClientConnectorError, ServerConnectionError)
 
@@ -61,6 +64,10 @@ class API:
         session: Optional aiohttp ClientSession for connection pooling.
             If not provided, a session will be created internally.
         timeout: Request timeout in seconds. Defaults to 30 seconds.
+        retry_count: Number of retry attempts for transient errors. Defaults to 3.
+        retry_delay: Initial delay between retries in seconds. Defaults to 1.0.
+        retry_multiplier: Multiplier for exponential backoff. Defaults to 2.0.
+        executor_timeout: Timeout for blocking executor calls in seconds. Defaults to 30.0.
 
     Attributes:
         username: The user's email address used for authentication.
@@ -79,12 +86,20 @@ class API:
             async with API(session=session) as api:
                 await api.async_login("user@example.com", "password")
                 user_info = await api.user.get_info()
+
+        # With custom retry configuration
+        async with API(retry_count=5, retry_delay=2.0) as api:
+            await api.async_login("user@example.com", "password")
         ```
     """
 
     # Public constructor parameters
     session: ClientSession | None = attr.ib(default=None)
     timeout: float = attr.ib(default=DEFAULT_TIMEOUT)
+    retry_count: int = attr.ib(default=DEFAULT_RETRY_COUNT)
+    retry_delay: float = attr.ib(default=DEFAULT_RETRY_DELAY)
+    retry_multiplier: float = attr.ib(default=DEFAULT_RETRY_MULTIPLIER)
+    executor_timeout: float = attr.ib(default=DEFAULT_EXECUTOR_TIMEOUT)
 
     # Authentication credentials
     username: str | None = attr.ib(default=None, init=False)
@@ -95,12 +110,6 @@ class API:
     _access_token: str | None = attr.ib(default=None, init=False)
     _refresh_token: str | None = attr.ib(default=None, init=False)
     _client_secret: str | None = attr.ib(default=None, init=False)
-    _expires_at: float | None = attr.ib(default=None, init=False)
-
-    # AWS credentials (unused but kept for compatibility)
-    _access_key: str | None = attr.ib(default=None, init=False)
-    _secret_key: str | None = attr.ib(default=None, init=False)
-    _client_callback: Any = attr.ib(default=None, init=False)
 
     # AWS Cognito configuration
     _user_pool_id: str = attr.ib(default=POOL_ID, init=False)
@@ -112,11 +121,7 @@ class API:
     _owns_session: bool = attr.ib(default=False, init=False)
     _boto_session: boto3.Session | None = attr.ib(default=None, init=False)
     _request_lock: asyncio.Lock = attr.ib(factory=asyncio.Lock, init=False)
-
-    # Retry configuration
-    _retry_count: int = attr.ib(default=DEFAULT_RETRY_COUNT, init=False)
-    _retry_delay: float = attr.ib(default=DEFAULT_RETRY_DELAY, init=False)
-    _retry_multiplier: float = attr.ib(default=DEFAULT_RETRY_MULTIPLIER, init=False)
+    _token_refresh_lock: asyncio.Lock = attr.ib(factory=asyncio.Lock, init=False)
 
     # Endpoint handlers (initialized after login)
     device: Device | None = attr.ib(default=None, init=False)
@@ -204,9 +209,9 @@ class API:
 
         session = self._get_session()
         last_error: Exception | None = None
-        delay = self._retry_delay
+        delay = self.retry_delay
 
-        for attempt in range(self._retry_count):
+        for attempt in range(self.retry_count):
             try:
                 async with session.request(method, url, **kwargs) as resp:
                     text = await resp.text()
@@ -218,17 +223,17 @@ class API:
 
             except RETRYABLE_EXCEPTIONS as err:
                 last_error = err
-                if attempt < self._retry_count - 1:
+                if attempt < self.retry_count - 1:
                     LOGGER.debug(
                         "Transient error on attempt %d/%d for %s: %s. Retrying in %.1fs",
                         attempt + 1,
-                        self._retry_count,
+                        self.retry_count,
                         url,
                         err,
                         delay,
                     )
                     await asyncio.sleep(delay)
-                    delay *= self._retry_multiplier
+                    delay *= self.retry_multiplier
                 continue
 
             except ClientResponseError as err:
@@ -248,7 +253,7 @@ class API:
 
         # All retries exhausted
         raise RequestError(
-            f"Request to {url} failed after {self._retry_count} attempts: {last_error}"
+            f"Request to {url} failed after {self.retry_count} attempts: {last_error}"
         ) from last_error
 
     async def _update_token(
@@ -295,18 +300,25 @@ class API:
             UserNotConfirmed: If the user hasn't confirmed their email.
             PasswordChangeRequired: If a password reset is required.
             UnknownError: For other AWS Cognito errors.
+            asyncio.TimeoutError: If the Cognito request times out.
         """
         loop = asyncio.get_running_loop()
         self.username = email
 
         try:
-            cognito = await loop.run_in_executor(
-                None,
-                partial(self._create_cognito_client, username=email),
+            cognito = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    partial(self._create_cognito_client, username=email),
+                ),
+                timeout=self.executor_timeout,
             )
-            await loop.run_in_executor(
-                None,
-                partial(cognito.authenticate, password=password),
+            await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    partial(cognito.authenticate, password=password),
+                ),
+                timeout=self.executor_timeout,
             )
 
             await self._update_token(
@@ -325,13 +337,14 @@ class API:
         """Check token validity and refresh if necessary.
 
         This method is called automatically before each API request.
-        Uses a lock to prevent concurrent token refresh attempts.
+        Uses a dedicated token refresh lock to prevent concurrent refresh attempts
+        while allowing other operations to proceed.
 
         Raises:
             Unauthenticated: If token refresh fails due to invalid credentials.
             UserNotFound: If the user account no longer exists.
         """
-        async with self._request_lock:
+        async with self._token_refresh_lock:
             if self._access_token is None or self._refresh_token is None:
                 return  # No tokens to check
 
@@ -361,6 +374,7 @@ class API:
         Raises:
             Unauthenticated: If the refresh token is invalid.
             UnknownError: For other AWS errors.
+            asyncio.TimeoutError: If the Cognito request times out.
         """
         loop = asyncio.get_running_loop()
         if email is not None:
@@ -373,7 +387,10 @@ class API:
         cognito = await self._async_authenticated_cognito()
 
         try:
-            await loop.run_in_executor(None, cognito.renew_access_token)
+            await asyncio.wait_for(
+                loop.run_in_executor(None, cognito.renew_access_token),
+                timeout=self.executor_timeout,
+            )
             await self._update_token(
                 cast(str, cognito.id_token),
                 cast(str, cognito.access_token),
@@ -393,19 +410,23 @@ class API:
 
         Raises:
             Unauthenticated: If no authentication tokens are available.
+            asyncio.TimeoutError: If the Cognito client creation times out.
         """
         if self._access_token is None or self._refresh_token is None:
             raise Unauthenticated("No authentication tokens available")
 
         loop = asyncio.get_running_loop()
 
-        return await loop.run_in_executor(
-            None,
-            partial(
-                self._create_cognito_client,
-                access_token=self._access_token,
-                refresh_token=self._refresh_token,
+        return await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                partial(
+                    self._create_cognito_client,
+                    access_token=self._access_token,
+                    refresh_token=self._refresh_token,
+                ),
             ),
+            timeout=self.executor_timeout,
         )
 
     def _create_cognito_client(self, **kwargs: Any) -> pycognito.Cognito:

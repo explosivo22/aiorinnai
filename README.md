@@ -16,13 +16,17 @@ NOTE:
 * This library is community supported, please submit changes and improvements.
 * This is a very basic interface, not well thought out at this point, but works for the use cases that initially prompted spitting this out from.
 
-## Supports
+## Features
 
-- Starting/stopping recirculation
-- Setting temperature
-- Turning water heater on/off
-- Enabling/disabling vacation mode
-- Maintenance data retrieval
+- **Secure Authentication** - AWS Cognito-based authentication with automatic token refresh
+- **Temperature Control** - Set temperature in Fahrenheit or Celsius with automatic conversion
+- **Recirculation Control** - Start/stop recirculation pump with configurable duration (1-60 minutes)
+- **Device Management** - Turn water heater on/off, enable/disable vacation mode
+- **Maintenance** - Trigger maintenance data retrieval
+- **Input Validation** - Built-in validation for temperature (100-140°F) and duration ranges
+- **Type Safety** - Full type hints with TypedDict definitions for API responses
+- **Async/Await** - Built on aiohttp for efficient async operations
+- **Retry Logic** - Configurable retry with exponential backoff for transient errors
 
 ## Installation
 
@@ -30,7 +34,29 @@ NOTE:
 pip install aiorinnai
 ```
 
-## Usage
+## Quick Start
+
+```python
+import asyncio
+from aiorinnai import API
+
+
+async def main() -> None:
+    async with API() as api:
+        await api.async_login("<EMAIL>", "<PASSWORD>")
+        
+        user_info = await api.user.get_info()
+        device = user_info["devices"]["items"][0]
+        
+        # Set temperature and start recirculation
+        await api.device.set_temperature(device, 120)
+        await api.device.start_recirculation(device, duration=5)
+
+
+asyncio.run(main())
+```
+
+## Usage Examples
 
 ### Basic Example
 
@@ -56,12 +82,14 @@ async def main() -> None:
         device_info = await api.device.get_info(device["id"])
 
         # Start recirculation for 5 minutes
-        await api.device.start_recirculation(device, 5)
+        response = await api.device.start_recirculation(device, 5)
+        if response.success:
+            print("Recirculation started!")
 
         # Stop recirculation
         await api.device.stop_recirculation(device)
 
-        # Set temperature (in degrees, increments of 5)
+        # Set temperature (100-140°F, increments of 5)
         await api.device.set_temperature(device, 120)
 
         # Turn water heater off
@@ -80,9 +108,66 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+### Temperature Unit Support
+
+Set temperature in Fahrenheit (default) or Celsius:
+
+```python
+import asyncio
+from aiorinnai import API, TemperatureUnit
+
+
+async def main() -> None:
+    async with API() as api:
+        await api.async_login("<EMAIL>", "<PASSWORD>")
+        user_info = await api.user.get_info()
+        device = user_info["devices"]["items"][0]
+
+        # Set temperature in Fahrenheit (default)
+        await api.device.set_temperature(device, 120)
+
+        # Set temperature in Celsius (auto-converts to Fahrenheit)
+        await api.device.set_temperature(device, 49, TemperatureUnit.CELSIUS)
+        
+        # Temperature conversion helpers
+        fahrenheit = TemperatureUnit.celsius_to_fahrenheit(49)  # Returns 120
+        celsius = TemperatureUnit.fahrenheit_to_celsius(120)    # Returns 48.89
+
+
+asyncio.run(main())
+```
+
+### Handling API Responses
+
+All device commands return an `APIResponse` object for consistent error handling:
+
+```python
+import asyncio
+from aiorinnai import API, APIResponse
+
+
+async def main() -> None:
+    async with API() as api:
+        await api.async_login("<EMAIL>", "<PASSWORD>")
+        user_info = await api.user.get_info()
+        device = user_info["devices"]["items"][0]
+
+        # APIResponse provides success status and data/error info
+        response: APIResponse = await api.device.set_temperature(device, 120)
+        
+        if response.success:
+            print("Temperature set successfully!")
+            print(f"Response data: {response.data}")
+        else:
+            print(f"Failed: {response.error}")
+
+
+asyncio.run(main())
+```
+
 ### With Connection Pooling (Recommended)
 
-For better performance, you can provide your own `aiohttp.ClientSession` for connection pooling:
+For better performance, provide your own `aiohttp.ClientSession`:
 
 ```python
 import asyncio
@@ -91,33 +176,23 @@ from aiorinnai import API
 
 
 async def main() -> None:
-    """Create the aiohttp session and run the example."""
     async with ClientSession() as session:
-        # Pass the session to the API constructor
         async with API(session=session) as api:
             await api.async_login("<EMAIL>", "<PASSWORD>")
-
-            # Get user account information
             user_info = await api.user.get_info()
-
-            # Get the first device
             device = user_info["devices"]["items"][0]
 
-            # Start recirculation for 5 minutes
-            await api.device.start_recirculation(device, 5)
-            print("Recirculation started!")
-
-            # Set temperature
-            await api.device.set_temperature(device, 125)
-            print("Temperature set!")
+            response = await api.device.start_recirculation(device, 5)
+            if response.success:
+                print("Recirculation started!")
 
 
 asyncio.run(main())
 ```
 
-### Custom Timeout
+### Custom Configuration
 
-You can configure request timeouts (default is 30 seconds):
+Configure timeouts, retry behavior, and more:
 
 ```python
 import asyncio
@@ -125,10 +200,53 @@ from aiorinnai import API
 
 
 async def main() -> None:
-    # Set a custom timeout of 60 seconds
-    async with API(timeout=60) as api:
+    # Full configuration options
+    async with API(
+        timeout=60.0,           # Request timeout in seconds (default: 30)
+        retry_count=5,          # Number of retry attempts (default: 3)
+        retry_delay=2.0,        # Initial delay between retries (default: 1.0)
+        retry_multiplier=2.0,   # Exponential backoff multiplier (default: 2.0)
+        executor_timeout=30.0,  # Timeout for blocking AWS calls (default: 30)
+    ) as api:
         await api.async_login("<EMAIL>", "<PASSWORD>")
         user_info = await api.user.get_info()
+
+
+asyncio.run(main())
+```
+
+### Input Validation
+
+The library validates inputs and raises `ValueError` for invalid values:
+
+```python
+import asyncio
+from aiorinnai import API
+
+
+async def main() -> None:
+    async with API() as api:
+        await api.async_login("<EMAIL>", "<PASSWORD>")
+        user_info = await api.user.get_info()
+        device = user_info["devices"]["items"][0]
+
+        try:
+            # Temperature must be 100-140°F
+            await api.device.set_temperature(device, 99)  # Raises ValueError
+        except ValueError as e:
+            print(f"Invalid temperature: {e}")
+
+        try:
+            # Duration must be 1-60 minutes
+            await api.device.start_recirculation(device, 0)  # Raises ValueError
+        except ValueError as e:
+            print(f"Invalid duration: {e}")
+
+        try:
+            # Device must have 'thing_name' attribute
+            await api.device.turn_on({})  # Raises ValueError
+        except ValueError as e:
+            print(f"Invalid device: {e}")
 
 
 asyncio.run(main())
@@ -160,6 +278,8 @@ async def main() -> None:
             print("User account not found")
         except RequestError as err:
             print(f"API request failed: {err}")
+        except asyncio.TimeoutError:
+            print("Request timed out")
 
 
 asyncio.run(main())
@@ -170,9 +290,16 @@ asyncio.run(main())
 ### API Class
 
 **Constructor:**
-- `API(session=None, timeout=30)` - Create an API client
-  - `session`: Optional `aiohttp.ClientSession` for connection pooling
-  - `timeout`: Request timeout in seconds (default: 30)
+```python
+API(
+    session: ClientSession | None = None,  # Optional aiohttp session
+    timeout: float = 30.0,                 # Request timeout in seconds
+    retry_count: int = 3,                  # Number of retry attempts
+    retry_delay: float = 1.0,              # Initial retry delay in seconds
+    retry_multiplier: float = 2.0,         # Exponential backoff multiplier
+    executor_timeout: float = 30.0,        # Timeout for blocking AWS calls
+)
+```
 
 **Methods:**
 - `async_login(email, password)` - Authenticate with your Rinnai account
@@ -187,30 +314,58 @@ asyncio.run(main())
 
 ### Device Methods
 
-- `get_info(device_id)` - Get detailed device information
-- `set_temperature(device, temp)` - Set water temperature
-- `start_recirculation(device, duration)` - Start recirculation pump (duration in minutes)
-- `stop_recirculation(device)` - Stop recirculation pump
-- `turn_on(device)` - Turn the water heater on
-- `turn_off(device)` - Turn the water heater off
-- `enable_vacation_mode(device)` - Enable vacation/holiday mode
-- `disable_vacation_mode(device)` - Disable vacation mode
-- `do_maintenance_retrieval(device)` - Trigger maintenance data retrieval
+All device methods return `APIResponse` with `success`, `data`, and `error` attributes.
+
+| Method | Description | Validation |
+|--------|-------------|------------|
+| `get_info(device_id)` | Get detailed device information | - |
+| `set_temperature(device, temp, unit=FAHRENHEIT)` | Set water temperature | 100-140°F or 38-60°C |
+| `start_recirculation(device, duration)` | Start recirculation pump | 1-60 minutes |
+| `stop_recirculation(device)` | Stop recirculation pump | - |
+| `turn_on(device)` | Turn the water heater on | - |
+| `turn_off(device)` | Turn the water heater off | - |
+| `enable_vacation_mode(device)` | Enable vacation/holiday mode | - |
+| `disable_vacation_mode(device)` | Disable vacation mode | - |
+| `do_maintenance_retrieval(device)` | Trigger maintenance data retrieval | - |
 
 ### User Methods
 
-- `get_info()` - Get user account information including all devices
+- `get_info()` - Get user account information including all devices (returns `UserInfo | None`)
+
+### Type Definitions
+
+The library exports TypedDict definitions for type-safe access to API responses:
+
+```python
+from aiorinnai import (
+    APIResponse,      # Dataclass: success, data, error
+    DeviceInfo,       # TypedDict for device data
+    ShadowData,       # TypedDict for device shadow state
+    UserInfo,         # TypedDict for user account data
+    TemperatureUnit,  # Enum: FAHRENHEIT, CELSIUS
+)
+```
 
 ### Exceptions
 
-- `RinnaiError` - Base exception for all errors
-- `RequestError` - HTTP/connection failures
-- `CloudError` - Base for authentication errors
-- `Unauthenticated` - Invalid credentials
-- `UserNotFound` - User account doesn't exist
-- `UserNotConfirmed` - Email not confirmed
-- `PasswordChangeRequired` - Password reset needed
-- `UnknownError` - Unrecognized AWS error
+| Exception | Description |
+|-----------|-------------|
+| `RinnaiError` | Base exception for all errors |
+| `RequestError` | HTTP/connection failures |
+| `CloudError` | Base for authentication errors |
+| `Unauthenticated` | Invalid credentials |
+| `UserNotFound` | User account doesn't exist |
+| `UserNotConfirmed` | Email not confirmed |
+| `PasswordChangeRequired` | Password reset needed |
+| `UnknownError` | Unrecognized AWS error |
+
+## Validation Ranges
+
+| Parameter | Valid Range | Notes |
+|-----------|-------------|-------|
+| Temperature (°F) | 100-140 | Increments of 5 recommended |
+| Temperature (°C) | 38-60 | Auto-converts to Fahrenheit |
+| Recirculation Duration | 1-60 minutes | - |
 
 ## Known Issues
 

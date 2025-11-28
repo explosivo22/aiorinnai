@@ -7,7 +7,14 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
-from .const import GET_PAYLOAD_HEADERS, GET_USER_PAYLOAD, GRAPHQL_ENDPOINT
+from .const import (
+    GET_PAYLOAD_HEADERS,
+    GET_USER_QUERY,
+    GRAPHQL_ENDPOINT,
+    build_graphql_payload,
+)
+from .errors import RequestError
+from .types import UserInfo
 
 # Type alias for the request function
 RequestFunc = Callable[..., Awaitable[dict[str, Any] | str]]
@@ -34,11 +41,11 @@ class User:
         self._request: RequestFunc = request
         self._user_id: str = user_id
 
-    async def get_info(self) -> dict[str, Any] | None:
+    async def get_info(self) -> UserInfo | None:
         """Retrieve the user's account information and devices.
 
         Returns:
-            A dictionary containing user account data, including:
+            A UserInfo dictionary containing user account data, including:
             - User profile information (name, email, address, etc.)
             - List of associated devices with their current states
             - Device schedules and configuration
@@ -46,9 +53,9 @@ class User:
             Returns None if no user data is found.
 
         Raises:
-            RequestError: If the API request fails.
+            RequestError: If the API request fails or returns an error.
         """
-        payload = GET_USER_PAYLOAD % (self._user_id)
+        payload = build_graphql_payload(GET_USER_QUERY, {"email": self._user_id})
 
         response = await self._request(
             "post",
@@ -60,7 +67,22 @@ class User:
         if isinstance(response, str):
             return None
 
-        items: list[dict[str, Any]] = response.get("data", {}).get("getUserByEmail", {}).get("items", [])
+        # Check for GraphQL errors
+        if "errors" in response:
+            errors = response.get("errors", [])
+            error_messages = [e.get("message", "Unknown error") for e in errors]
+            raise RequestError(f"GraphQL errors: {'; '.join(error_messages)}")
+
+        data = response.get("data")
+        if data is None:
+            return None
+
+        user_by_email = data.get("getUserByEmail")
+        if user_by_email is None:
+            return None
+
+        items: list[UserInfo] = user_by_email.get("items", [])
         if items:
             return items[0]
+
         return None

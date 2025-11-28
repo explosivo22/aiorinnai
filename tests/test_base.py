@@ -15,12 +15,19 @@ from aiohttp.client_reqrep import ConnectionKey
 
 from aiorinnai import (
     API,
+    APIResponse,
     Device,
     RequestError,
+    TemperatureUnit,
     Unauthenticated,
     UnknownError,
     User,
     UserNotFound,
+)
+from aiorinnai.types import (
+    validate_duration,
+    validate_temperature,
+    validate_thing_name,
 )
 
 
@@ -302,7 +309,8 @@ class TestDevice:
         dev = {"thing_name": "rinnai-thing-123"}
         result = await device.set_temperature(dev, 125)
 
-        assert result == "success"
+        assert isinstance(result, APIResponse)
+        assert result.success is True
         call_args = mock_request.call_args
         assert "set_domestic_temperature" in call_args.kwargs.get("data", "")
 
@@ -315,7 +323,8 @@ class TestDevice:
         dev = {"thing_name": "rinnai-thing-123"}
         result = await device.start_recirculation(dev, duration=5)
 
-        assert result == "success"
+        assert isinstance(result, APIResponse)
+        assert result.success is True
         call_args = mock_request.call_args
         data = call_args.kwargs.get("data", "")
         assert "set_recirculation_enabled" in data
@@ -330,7 +339,8 @@ class TestDevice:
         dev = {"thing_name": "rinnai-thing-123"}
         result = await device.stop_recirculation(dev)
 
-        assert result == "success"
+        assert isinstance(result, APIResponse)
+        assert result.success is True
 
     @pytest.mark.asyncio
     async def test_turn_on_off(self) -> None:
@@ -340,9 +350,13 @@ class TestDevice:
 
         dev = {"thing_name": "rinnai-thing-123"}
 
-        await device.turn_off(dev)
-        await device.turn_on(dev)
+        result_off = await device.turn_off(dev)
+        result_on = await device.turn_on(dev)
 
+        assert isinstance(result_off, APIResponse)
+        assert isinstance(result_on, APIResponse)
+        assert result_off.success is True
+        assert result_on.success is True
         assert mock_request.call_count == 2
 
 
@@ -464,3 +478,315 @@ class TestSessionManagement:
         assert session.timeout.total == 60.0
 
         await api.close()
+
+
+class TestInputValidation:
+    """Tests for input validation functions."""
+
+    def test_validate_temperature_fahrenheit_valid(self) -> None:
+        """Test valid Fahrenheit temperatures."""
+        assert validate_temperature(100, TemperatureUnit.FAHRENHEIT) == 100
+        assert validate_temperature(120, TemperatureUnit.FAHRENHEIT) == 120
+        assert validate_temperature(140, TemperatureUnit.FAHRENHEIT) == 140
+
+    def test_validate_temperature_fahrenheit_invalid_low(self) -> None:
+        """Test temperature below minimum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_temperature(99, TemperatureUnit.FAHRENHEIT)
+        assert "must be between 100 and 140°F" in str(exc_info.value)
+        assert "got 99°F" in str(exc_info.value)
+
+    def test_validate_temperature_fahrenheit_invalid_high(self) -> None:
+        """Test temperature above maximum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_temperature(141, TemperatureUnit.FAHRENHEIT)
+        assert "must be between 100 and 140°F" in str(exc_info.value)
+        assert "got 141°F" in str(exc_info.value)
+
+    def test_validate_temperature_celsius_valid(self) -> None:
+        """Test valid Celsius temperatures with conversion."""
+        # 38°C ≈ 100°F
+        result = validate_temperature(38, TemperatureUnit.CELSIUS)
+        assert result == 100
+
+        # 49°C ≈ 120°F
+        result = validate_temperature(49, TemperatureUnit.CELSIUS)
+        assert result == 120
+
+        # 60°C = 140°F
+        result = validate_temperature(60, TemperatureUnit.CELSIUS)
+        assert result == 140
+
+    def test_validate_temperature_celsius_invalid_low(self) -> None:
+        """Test Celsius temperature below minimum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_temperature(37, TemperatureUnit.CELSIUS)
+        assert "must be between 38 and 60°C" in str(exc_info.value)
+
+    def test_validate_temperature_celsius_invalid_high(self) -> None:
+        """Test Celsius temperature above maximum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_temperature(61, TemperatureUnit.CELSIUS)
+        assert "must be between 38 and 60°C" in str(exc_info.value)
+
+    def test_validate_duration_valid(self) -> None:
+        """Test valid recirculation durations."""
+        assert validate_duration(1) == 1
+        assert validate_duration(30) == 30
+        assert validate_duration(60) == 60
+
+    def test_validate_duration_invalid_low(self) -> None:
+        """Test duration below minimum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_duration(0)
+        assert "must be between 1 and 60 minutes" in str(exc_info.value)
+
+    def test_validate_duration_invalid_high(self) -> None:
+        """Test duration above maximum raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_duration(61)
+        assert "must be between 1 and 60 minutes" in str(exc_info.value)
+
+    def test_validate_thing_name_valid(self) -> None:
+        """Test valid thing_name extraction."""
+        dev = {"thing_name": "rinnai-thing-123"}
+        assert validate_thing_name(dev) == "rinnai-thing-123"
+
+    def test_validate_thing_name_missing(self) -> None:
+        """Test missing thing_name raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_thing_name({})
+        assert "must have a 'thing_name' attribute" in str(exc_info.value)
+
+    def test_validate_thing_name_empty(self) -> None:
+        """Test empty thing_name raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_thing_name({"thing_name": ""})
+        assert "must have a 'thing_name' attribute" in str(exc_info.value)
+
+    def test_validate_thing_name_none(self) -> None:
+        """Test None thing_name raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_thing_name({"thing_name": None})
+        assert "must have a 'thing_name' attribute" in str(exc_info.value)
+
+
+class TestTemperatureUnitConversion:
+    """Tests for temperature unit conversion helpers."""
+
+    def test_celsius_to_fahrenheit(self) -> None:
+        """Test Celsius to Fahrenheit conversion."""
+        assert TemperatureUnit.celsius_to_fahrenheit(0) == 32
+        assert TemperatureUnit.celsius_to_fahrenheit(100) == 212
+        assert TemperatureUnit.celsius_to_fahrenheit(40) == 104
+        assert TemperatureUnit.celsius_to_fahrenheit(60) == 140
+
+    def test_fahrenheit_to_celsius(self) -> None:
+        """Test Fahrenheit to Celsius conversion."""
+        assert TemperatureUnit.fahrenheit_to_celsius(32) == 0
+        assert TemperatureUnit.fahrenheit_to_celsius(212) == 100
+        assert TemperatureUnit.fahrenheit_to_celsius(104) == 40
+        assert TemperatureUnit.fahrenheit_to_celsius(140) == 60
+
+
+class TestDeviceValidation:
+    """Tests for device methods with input validation."""
+
+    @pytest.mark.asyncio
+    async def test_set_temperature_validation_error_low(self) -> None:
+        """Test set_temperature with temperature below minimum."""
+        mock_request = AsyncMock()
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        with pytest.raises(ValueError) as exc_info:
+            await device.set_temperature(dev, 99)
+        assert "must be between 100 and 140°F" in str(exc_info.value)
+        mock_request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_set_temperature_validation_error_high(self) -> None:
+        """Test set_temperature with temperature above maximum."""
+        mock_request = AsyncMock()
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        with pytest.raises(ValueError) as exc_info:
+            await device.set_temperature(dev, 141)
+        assert "must be between 100 and 140°F" in str(exc_info.value)
+        mock_request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_set_temperature_celsius(self) -> None:
+        """Test set_temperature with Celsius unit."""
+        mock_request = AsyncMock(return_value="success")
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        # 49°C ≈ 120°F
+        result = await device.set_temperature(dev, 49, TemperatureUnit.CELSIUS)
+
+        assert isinstance(result, APIResponse)
+        assert result.success is True
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        data = call_args.kwargs.get("data", "")
+        assert "120" in data  # Converted from 49°C
+
+    @pytest.mark.asyncio
+    async def test_start_recirculation_validation_error_low(self) -> None:
+        """Test start_recirculation with duration below minimum."""
+        mock_request = AsyncMock()
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        with pytest.raises(ValueError) as exc_info:
+            await device.start_recirculation(dev, duration=0)
+        assert "must be between 1 and 60 minutes" in str(exc_info.value)
+        mock_request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_start_recirculation_validation_error_high(self) -> None:
+        """Test start_recirculation with duration above maximum."""
+        mock_request = AsyncMock()
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        with pytest.raises(ValueError) as exc_info:
+            await device.start_recirculation(dev, duration=61)
+        assert "must be between 1 and 60 minutes" in str(exc_info.value)
+        mock_request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_set_shadow_missing_thing_name(self) -> None:
+        """Test _set_shadow raises ValueError for missing thing_name."""
+        mock_request = AsyncMock()
+        device = Device(mock_request)
+
+        with pytest.raises(ValueError) as exc_info:
+            await device.turn_on({})
+        assert "must have a 'thing_name' attribute" in str(exc_info.value)
+        mock_request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_enable_vacation_mode(self) -> None:
+        """Test enabling vacation mode."""
+        mock_request = AsyncMock(return_value="success")
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        result = await device.enable_vacation_mode(dev)
+
+        assert isinstance(result, APIResponse)
+        assert result.success is True
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        data = call_args.kwargs.get("data", "")
+        assert "schedule_holiday" in data
+        assert "true" in data.lower()
+
+    @pytest.mark.asyncio
+    async def test_disable_vacation_mode(self) -> None:
+        """Test disabling vacation mode."""
+        mock_request = AsyncMock(return_value="success")
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        result = await device.disable_vacation_mode(dev)
+
+        assert isinstance(result, APIResponse)
+        assert result.success is True
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        data = call_args.kwargs.get("data", "")
+        assert "schedule_holiday" in data
+        assert "schedule_enabled" in data
+
+    @pytest.mark.asyncio
+    async def test_do_maintenance_retrieval(self) -> None:
+        """Test triggering maintenance retrieval."""
+        mock_request = AsyncMock(return_value="success")
+        device = Device(mock_request)
+        dev = {"thing_name": "rinnai-thing-123"}
+
+        result = await device.do_maintenance_retrieval(dev)
+
+        assert isinstance(result, APIResponse)
+        assert result.success is True
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        data = call_args.kwargs.get("data", "")
+        assert "do_maintenance_retrieval" in data
+
+
+class TestAPIConfiguration:
+    """Tests for configurable API parameters."""
+
+    def test_custom_retry_parameters(self) -> None:
+        """Test API accepts custom retry configuration."""
+        api = API(
+            retry_count=5,
+            retry_delay=2.0,
+            retry_multiplier=3.0,
+        )
+
+        assert api.retry_count == 5
+        assert api.retry_delay == 2.0
+        assert api.retry_multiplier == 3.0
+
+    def test_custom_executor_timeout(self) -> None:
+        """Test API accepts custom executor timeout."""
+        api = API(executor_timeout=60.0)
+        assert api.executor_timeout == 60.0
+
+    def test_default_retry_parameters(self) -> None:
+        """Test API uses default retry configuration."""
+        api = API()
+
+        assert api.retry_count == 3
+        assert api.retry_delay == 1.0
+        assert api.retry_multiplier == 2.0
+        assert api.executor_timeout == 30.0
+
+    @pytest.mark.asyncio
+    async def test_token_refresh_lock_separate_from_request_lock(
+        self, mock_cognito: MagicMock
+    ) -> None:
+        """Test that token refresh lock is separate from request lock."""
+        with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
+            api = API()
+            await api.async_login("test@example.com", "password")
+
+            # Verify both locks exist and are different objects
+            assert hasattr(api, "_request_lock")
+            assert hasattr(api, "_token_refresh_lock")
+            assert api._request_lock is not api._token_refresh_lock
+            assert isinstance(api._request_lock, asyncio.Lock)
+            assert isinstance(api._token_refresh_lock, asyncio.Lock)
+
+            await api.close()
+
+
+class TestAPIResponseDataclass:
+    """Tests for the APIResponse dataclass."""
+
+    def test_api_response_success(self) -> None:
+        """Test creating a successful APIResponse."""
+        response = APIResponse(success=True, data={"result": "ok"})
+        assert response.success is True
+        assert response.data == {"result": "ok"}
+        assert response.error is None
+
+    def test_api_response_failure(self) -> None:
+        """Test creating a failed APIResponse."""
+        response = APIResponse(success=False, error="Something went wrong")
+        assert response.success is False
+        assert response.data is None
+        assert response.error == "Something went wrong"
+
+    def test_api_response_defaults(self) -> None:
+        """Test APIResponse default values."""
+        response = APIResponse(success=True)
+        assert response.success is True
+        assert response.data is None
+        assert response.error is None

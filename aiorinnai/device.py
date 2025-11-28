@@ -9,11 +9,19 @@ import json
 from typing import Any, Awaitable, Callable
 
 from .const import (
-    GET_DEVICE_PAYLOAD,
+    GET_DEVICE_QUERY,
     GET_PAYLOAD_HEADERS,
     GRAPHQL_ENDPOINT,
     LOGGER,
     SHADOW_ENDPOINT_PATCH,
+    build_graphql_payload,
+)
+from .types import (
+    APIResponse,
+    TemperatureUnit,
+    validate_duration,
+    validate_temperature,
+    validate_thing_name,
 )
 
 # Type alias for the request function
@@ -51,7 +59,7 @@ class Device:
         Raises:
             RequestError: If the API request fails.
         """
-        payload = GET_DEVICE_PAYLOAD % (device_id)
+        payload = build_graphql_payload(GET_DEVICE_QUERY, {"id": device_id})
 
         response = await self._request(
             "post",
@@ -69,7 +77,7 @@ class Device:
         self,
         dev: dict[str, Any],
         settings: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Send a shadow update to modify device state.
 
         Args:
@@ -77,13 +85,15 @@ class Device:
             settings: The settings to update on the device shadow.
 
         Returns:
-            The API response, typically "success" or a dictionary.
+            APIResponse with success status and data/error information.
 
         Raises:
+            ValueError: If device is missing 'thing_name'.
             RequestError: If the API request fails.
         """
+        thing_name = validate_thing_name(dev)
         data = json.dumps(settings)
-        LOGGER.debug("Setting shadow for %s: %s", dev.get("thing_name"), data)
+        LOGGER.debug("Setting shadow for %s: %s", thing_name, data)
 
         headers = {
             "User-Agent": "okhttp/3.12.1",
@@ -94,47 +104,67 @@ class Device:
 
         result = await self._request(
             "patch",
-            SHADOW_ENDPOINT_PATCH % (dev["thing_name"]),
+            SHADOW_ENDPOINT_PATCH.format(thing_name=thing_name),
             data=data,
             headers=headers,
         )
-        return result
+
+        if isinstance(result, str) and result == "success":
+            return APIResponse(success=True, data={"result": "success"})
+        elif isinstance(result, dict):
+            return APIResponse(success=True, data=result)
+        else:
+            return APIResponse(success=False, error=f"Unexpected response: {result}")
 
     async def set_temperature(
         self,
         dev: dict[str, Any],
-        temp: int,
-    ) -> dict[str, Any] | str:
+        temp: int | float,
+        unit: TemperatureUnit = TemperatureUnit.FAHRENHEIT,
+    ) -> APIResponse:
         """Set the target water temperature.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
-            temp: The target temperature in degrees (device-specific units).
+            temp: The target temperature (100-140°F or ~38-60°C).
+            unit: Temperature unit (default: Fahrenheit).
 
         Returns:
-            The API response confirming the temperature change.
+            APIResponse confirming the temperature change.
 
         Raises:
+            ValueError: If temperature is outside valid range or device missing thing_name.
             RequestError: If the API request fails.
+
+        Example:
+            ```python
+            # Set temperature in Fahrenheit (default)
+            await device.set_temperature(dev, 120)
+
+            # Set temperature in Celsius
+            await device.set_temperature(dev, 49, TemperatureUnit.CELSIUS)
+            ```
         """
+        validated_temp = validate_temperature(temp, unit)
         return await self._set_shadow(
             dev,
-            {"set_priority_status": True, "set_domestic_temperature": temp},
+            {"set_priority_status": True, "set_domestic_temperature": validated_temp},
         )
 
     async def stop_recirculation(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Stop the water recirculation pump.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming recirculation was stopped.
+            APIResponse confirming recirculation was stopped.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(dev, {"set_recirculation_enabled": False})
@@ -143,37 +173,40 @@ class Device:
         self,
         dev: dict[str, Any],
         duration: int,
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Start the water recirculation pump for a specified duration.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
-            duration: The recirculation duration in minutes.
+            duration: The recirculation duration in minutes (1-60).
 
         Returns:
-            The API response confirming recirculation was started.
+            APIResponse confirming recirculation was started.
 
         Raises:
+            ValueError: If duration is outside valid range (1-60) or device missing thing_name.
             RequestError: If the API request fails.
         """
+        validated_duration = validate_duration(duration)
         return await self._set_shadow(
             dev,
-            {"recirculation_duration": str(duration), "set_recirculation_enabled": True},
+            {"recirculation_duration": str(validated_duration), "set_recirculation_enabled": True},
         )
 
     async def do_maintenance_retrieval(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Trigger maintenance data retrieval from the device.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming the maintenance retrieval request.
+            APIResponse confirming the maintenance retrieval request.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(dev, {"do_maintenance_retrieval": True})
@@ -181,7 +214,7 @@ class Device:
     async def enable_vacation_mode(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Enable vacation/holiday mode on the device.
 
         When enabled, the water heater operates in an energy-saving mode.
@@ -190,9 +223,10 @@ class Device:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming vacation mode was enabled.
+            APIResponse confirming vacation mode was enabled.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(dev, {"schedule_holiday": True})
@@ -200,7 +234,7 @@ class Device:
     async def disable_vacation_mode(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Disable vacation/holiday mode on the device.
 
         Restores normal scheduled operation.
@@ -209,9 +243,10 @@ class Device:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming vacation mode was disabled.
+            APIResponse confirming vacation mode was disabled.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(
@@ -222,16 +257,17 @@ class Device:
     async def turn_off(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Turn off the water heater.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming the device was turned off.
+            APIResponse confirming the device was turned off.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(dev, {"set_operation_enabled": False})
@@ -239,16 +275,17 @@ class Device:
     async def turn_on(
         self,
         dev: dict[str, Any],
-    ) -> dict[str, Any] | str:
+    ) -> APIResponse:
         """Turn on the water heater.
 
         Args:
             dev: The device dictionary containing 'thing_name'.
 
         Returns:
-            The API response confirming the device was turned on.
+            APIResponse confirming the device was turned on.
 
         Raises:
+            ValueError: If device is missing thing_name.
             RequestError: If the API request fails.
         """
         return await self._set_shadow(dev, {"set_operation_enabled": True})
