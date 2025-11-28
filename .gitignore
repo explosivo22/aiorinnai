@@ -8,3 +8,7 @@ __pycache__
 pyenv/
 *~
 *.swp
+
+# GitHub Copilot instructions and prompts
+.github/instructions/
+.github/prompts/
