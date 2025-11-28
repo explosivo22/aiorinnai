@@ -397,6 +397,7 @@ def validate_thing_name(dev: dict[str, Any]) -> str:
         ValueError: If thing_name is missing or empty.
     """
     thing_name = dev.get("thing_name")
-    if not thing_name:
+    if not thing_name or not isinstance(thing_name, str):
         raise ValueError("Device must have a 'thing_name' attribute")
-    return thing_name
+    result: str = thing_name
+    return result

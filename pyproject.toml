@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aiorinnai"
+dynamic = ["version"]
+description = "Python interface for Rinnai Control-R API"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [
+    { name = "Brad Barbour", email = "explosivo22@protonmail.com" }
+]
+keywords = ["rinnai", "home automation", "water heater", "iot", "async"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Framework :: AsyncIO",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+dependencies = [
+    "aiohttp>=3.9.0",
+    "pycognito>=2024.5.1",
+    "boto3>=1.34.0",
+    "botocore>=1.34.0",
+    "attrs>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "aioresponses>=0.7.6",
+    "mypy>=1.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/explosivo22/aiorinnai"
+Repository = "https://github.com/explosivo22/aiorinnai"
+Issues = "https://github.com/explosivo22/aiorinnai/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "aiorinnai.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["aiorinnai*"]
+
+[tool.setuptools.package-data]
+aiorinnai = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+packages = ["aiorinnai"]
