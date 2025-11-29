@@ -39,6 +39,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "aioresponses>=0.7.6",
     "mypy>=1.10.0",
+    "ruff>=0.8.0",
 ]
 
 [project.urls]

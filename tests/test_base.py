@@ -459,6 +459,55 @@ class TestSessionManagement:
             assert api.is_connected is False
 
     @pytest.mark.asyncio
+    async def test_token_properties_before_login(self) -> None:
+        """Test token properties return None before authentication."""
+        api = API()
+
+        assert api.id_token is None
+        assert api.access_token is None
+        assert api.refresh_token is None
+
+        await api.close()
+
+    @pytest.mark.asyncio
+    async def test_token_properties_after_login(self, mock_cognito: MagicMock) -> None:
+        """Test token properties return correct values after authentication."""
+        with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
+            api = API()
+            await api.async_login("test@example.com", "password")
+
+            # Verify public properties match private storage
+            assert api.id_token == "mock_id_token"
+            assert api.access_token == "mock_access_token"
+            assert api.refresh_token == "mock_refresh_token"
+
+            # Verify properties match internal state
+            assert api.id_token == api._id_token
+            assert api.access_token == api._access_token
+            assert api.refresh_token == api._refresh_token
+
+            await api.close()
+
+    @pytest.mark.asyncio
+    async def test_token_properties_are_read_only(self, mock_cognito: MagicMock) -> None:
+        """Test that token properties cannot be set directly."""
+        with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
+            api = API()
+            await api.async_login("test@example.com", "password")
+
+            # Attempting to set properties should raise AttributeError
+            with pytest.raises(AttributeError):
+                api.id_token = "new_token"  # type: ignore[misc]
+
+            with pytest.raises(AttributeError):
+                api.access_token = "new_token"  # type: ignore[misc]
+
+            with pytest.raises(AttributeError):
+                api.refresh_token = "new_token"  # type: ignore[misc]
+
+            await api.close()
+
+    @pytest.mark.asyncio
     async def test_custom_timeout(self) -> None:
         """Test that custom timeout is applied."""
         api = API(timeout=60.0)

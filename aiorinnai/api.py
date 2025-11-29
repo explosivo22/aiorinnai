@@ -161,6 +161,43 @@ class API:
             and self._id_token is not None
         )
 
+    @property
+    def id_token(self) -> str | None:
+        """The current JWT ID token from Cognito.
+
+        This token is used for API authentication and contains user claims.
+        Returns None if not authenticated.
+
+        Returns:
+            The JWT ID token string, or None if not authenticated.
+        """
+        return self._id_token
+
+    @property
+    def access_token(self) -> str | None:
+        """The current JWT access token from Cognito.
+
+        This token is used for Cognito API operations and token validation.
+        Returns None if not authenticated.
+
+        Returns:
+            The JWT access token string, or None if not authenticated.
+        """
+        return self._access_token
+
+    @property
+    def refresh_token(self) -> str | None:
+        """The current refresh token from Cognito.
+
+        This token is used to obtain new access/ID tokens when they expire.
+        Useful for persisting authentication state (e.g., in config entries).
+        Returns None if not authenticated.
+
+        Returns:
+            The refresh token string, or None if not authenticated.
+        """
+        return self._refresh_token
+
     def _get_session(self) -> ClientSession:
         """Get or create an aiohttp ClientSession.
 
