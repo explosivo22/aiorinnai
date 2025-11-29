@@ -111,3 +111,12 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 packages = ["aiorinnai"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "boto3.*",
+    "botocore.*",
+    "pycognito.*",
+]
+ignore_missing_imports = true
