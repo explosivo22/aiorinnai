@@ -55,9 +55,21 @@ jobs:
       uses: orhun/git-cliff-action@v4
       with:
         config: .github/cliff.toml
-        args: --latest --strip header
+        args: --verbose --latest --strip header
       env:
         OUTPUT: CHANGELOG.md
+        GITHUB_REPO: ${{ github.repository }}
+
+    - name: Debug changelog output
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        echo "Changelog file: ${{ steps.changelog.outputs.changelog }}"
+        echo "Changelog content length: ${#CONTENT}"
+        echo "--- Changelog content ---"
+        echo "${{ steps.changelog.outputs.content }}"
+        echo "--- End changelog ---"
+      env:
+        CONTENT: ${{ steps.changelog.outputs.content }}
 
     - name: Create and push tag
       if: steps.check_tag.outputs.exists == 'false'
