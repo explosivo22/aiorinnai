@@ -3,10 +3,12 @@
 This module provides the Device class for sending commands to Rinnai
 water heaters via the shadow PATCH endpoint.
 """
+
 from __future__ import annotations
 
 import json
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from .const import (
     GET_DEVICE_QUERY,
@@ -133,7 +135,8 @@ class Device:
             APIResponse confirming the temperature change.
 
         Raises:
-            ValueError: If temperature is outside valid range or device missing thing_name.
+            ValueError: If temperature is outside valid range or device
+                missing thing_name.
             RequestError: If the API request fails.
 
         Example:
@@ -184,13 +187,17 @@ class Device:
             APIResponse confirming recirculation was started.
 
         Raises:
-            ValueError: If duration is outside valid range (1-60) or device missing thing_name.
+            ValueError: If duration is outside valid range (1-60) or device
+                missing thing_name.
             RequestError: If the API request fails.
         """
         validated_duration = validate_duration(duration)
         return await self._set_shadow(
             dev,
-            {"recirculation_duration": str(validated_duration), "set_recirculation_enabled": True},
+            {
+                "recirculation_duration": str(validated_duration),
+                "set_recirculation_enabled": True,
+            },
         )
 
     async def do_maintenance_retrieval(

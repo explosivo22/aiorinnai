@@ -3,6 +3,7 @@
 This module provides TypedDict definitions for API responses, a dataclass
 for structured API responses, and a temperature unit enum with conversion helpers.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

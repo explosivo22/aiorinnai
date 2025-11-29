@@ -3,6 +3,7 @@
 This module contains unit tests for the API client, device commands,
 and user data retrieval with mocked HTTP responses.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -12,6 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aiohttp import ClientConnectorError, ClientSession
 from aiohttp.client_reqrep import ConnectionKey
+from botocore.exceptions import ClientError
 
 from aiorinnai import (
     API,
@@ -28,7 +30,6 @@ from aiorinnai.types import (
     validate_temperature,
     validate_thing_name,
 )
-
 
 # Sample response data
 SAMPLE_USER_RESPONSE: dict[str, Any] = {
@@ -108,9 +109,7 @@ class TestAPILogin:
     @pytest.mark.asyncio
     async def test_login_invalid_credentials(self) -> None:
         """Test login with invalid credentials raises Unauthenticated."""
-        from botocore.exceptions import ClientError
-
-        error_response = {
+        error_response: Any = {
             "Error": {
                 "Code": "NotAuthorizedException",
                 "Message": "Incorrect username or password.",
@@ -132,9 +131,7 @@ class TestAPILogin:
     @pytest.mark.asyncio
     async def test_login_user_not_found(self) -> None:
         """Test login with non-existent user raises UserNotFound."""
-        from botocore.exceptions import ClientError
-
-        error_response = {
+        error_response: Any = {
             "Error": {
                 "Code": "UserNotFoundException",
                 "Message": "User does not exist.",
@@ -170,7 +167,7 @@ class TestAPIRequest:
             mock_response.json = AsyncMock(return_value={"result": "ok"})
             mock_response.raise_for_status = MagicMock()
 
-            async def mock_context_manager(*args: Any, **kwargs: Any) -> Any:
+            async def mock_context_manager(*_args: Any, **_kwargs: Any) -> Any:
                 return mock_response
 
             with patch.object(api, "_get_session") as mock_get_session:
@@ -201,12 +198,14 @@ class TestAPIRequest:
                 host="api.example.com",
                 port=443,
                 is_ssl=True,
-                ssl=None,
+                ssl=False,
                 proxy=None,
                 proxy_auth=None,
                 proxy_headers_hash=None,
             )
-            connection_error = ClientConnectorError(conn_key, OSError("Connection refused"))
+            connection_error = ClientConnectorError(
+                conn_key, OSError("Connection refused")
+            )
 
             mock_response = MagicMock()
             mock_response.text = AsyncMock(return_value='{"result": "ok"}')
@@ -215,7 +214,7 @@ class TestAPIRequest:
 
             call_count = 0
 
-            async def mock_aenter(*args: Any, **kwargs: Any) -> Any:
+            async def mock_aenter(*_args: Any, **_kwargs: Any) -> Any:
                 nonlocal call_count
                 call_count += 1
                 if call_count < 3:
@@ -251,14 +250,16 @@ class TestAPIRequest:
                 host="api.example.com",
                 port=443,
                 is_ssl=True,
-                ssl=None,
+                ssl=False,
                 proxy=None,
                 proxy_auth=None,
                 proxy_headers_hash=None,
             )
-            connection_error = ClientConnectorError(conn_key, OSError("Connection refused"))
+            connection_error = ClientConnectorError(
+                conn_key, OSError("Connection refused")
+            )
 
-            async def mock_aenter(*args: Any, **kwargs: Any) -> Any:
+            async def mock_aenter(*_args: Any, **_kwargs: Any) -> Any:
                 raise connection_error
 
             with patch.object(api, "_get_session") as mock_get_session:
@@ -369,9 +370,7 @@ class TestUser:
     @pytest.mark.asyncio
     async def test_get_info_empty_response(self) -> None:
         """Test get_info returns None when no user data found."""
-        empty_response: dict[str, Any] = {
-            "data": {"getUserByEmail": {"items": []}}
-        }
+        empty_response: dict[str, Any] = {"data": {"getUserByEmail": {"items": []}}}
         mock_request = AsyncMock(return_value=empty_response)
         user = User(mock_request, "unknown@example.com")
 
@@ -489,7 +488,9 @@ class TestSessionManagement:
             await api.close()
 
     @pytest.mark.asyncio
-    async def test_token_properties_are_read_only(self, mock_cognito: MagicMock) -> None:
+    async def test_token_properties_are_read_only(
+        self, mock_cognito: MagicMock
+    ) -> None:
         """Test that token properties cannot be set directly."""
         with patch("aiorinnai.api.pycognito.Cognito", return_value=mock_cognito):
             api = API()

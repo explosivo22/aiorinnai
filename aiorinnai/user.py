@@ -3,9 +3,11 @@
 This module provides the User class for retrieving user account
 information and associated devices from the Rinnai cloud API.
 """
+
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
 from .const import (
     GET_PAYLOAD_HEADERS,
@@ -14,7 +16,9 @@ from .const import (
     build_graphql_payload,
 )
 from .errors import RequestError
-from .types import UserInfo
+
+if TYPE_CHECKING:
+    from .types import UserInfo
 
 # Type alias for the request function
 RequestFunc = Callable[..., Awaitable[dict[str, Any] | str]]

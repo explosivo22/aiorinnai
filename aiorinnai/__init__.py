@@ -53,25 +53,25 @@ __version__ = "0.5.1"
 __all__ = [
     # Core classes
     "API",
-    "Device",
-    "User",
-    # Type definitions
-    "APIResponse",
-    "DeviceInfo",
-    "ShadowData",
-    "TemperatureUnit",
-    "UserInfo",
-    # Base exceptions
-    "RinnaiError",
-    "RequestError",
-    # Cloud/Auth exceptions
-    "CloudError",
-    "Unauthenticated",
-    "UserNotFound",
-    "UserExists",
-    "UserNotConfirmed",
-    "PasswordChangeRequired",
-    "UnknownError",
     # Utilities
     "AWS_EXCEPTIONS",
+    # Type definitions
+    "APIResponse",
+    # Cloud/Auth exceptions
+    "CloudError",
+    "Device",
+    "DeviceInfo",
+    "PasswordChangeRequired",
+    "RequestError",
+    # Base exceptions
+    "RinnaiError",
+    "ShadowData",
+    "TemperatureUnit",
+    "Unauthenticated",
+    "UnknownError",
+    "User",
+    "UserExists",
+    "UserInfo",
+    "UserNotConfirmed",
+    "UserNotFound",
 ]
