@@ -55,7 +55,7 @@ jobs:
       uses: orhun/git-cliff-action@v4
       with:
         config: .github/cliff.toml
-        args: --verbose --latest --strip header
+        args: --verbose --unreleased --strip header
       env:
         OUTPUT: CHANGELOG.md
         GITHUB_REPO: ${{ github.repository }}
