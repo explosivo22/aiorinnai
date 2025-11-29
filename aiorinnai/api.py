@@ -3,11 +3,13 @@
 This module provides the main API class for authenticating with the Rinnai
 cloud service and making authenticated requests to device and user endpoints.
 """
+
 from __future__ import annotations
 
 import asyncio
 from functools import partial
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import attr
 import boto3
@@ -21,7 +23,6 @@ from aiohttp.client_exceptions import (
     ServerConnectionError,
 )
 from botocore.exceptions import BotoCoreError, ClientError
-from urllib.parse import urlparse
 
 from .const import CLIENT_ID, LOGGER, POOL_ID, POOL_REGION
 from .device import Device
@@ -67,7 +68,8 @@ class API:
         retry_count: Number of retry attempts for transient errors. Defaults to 3.
         retry_delay: Initial delay between retries in seconds. Defaults to 1.0.
         retry_multiplier: Multiplier for exponential backoff. Defaults to 2.0.
-        executor_timeout: Timeout for blocking executor calls in seconds. Defaults to 30.0.
+        executor_timeout: Timeout for blocking executor calls in seconds.
+            Defaults to 30.0.
 
     Attributes:
         username: The user's email address used for authentication.
@@ -135,7 +137,7 @@ class API:
         else:
             self._owns_session = True
 
-    async def __aenter__(self) -> "API":
+    async def __aenter__(self) -> API:
         """Enter async context manager."""
         return self
 
@@ -161,6 +163,43 @@ class API:
             and self._id_token is not None
         )
 
+    @property
+    def id_token(self) -> str | None:
+        """The current JWT ID token from Cognito.
+
+        This token is used for API authentication and contains user claims.
+        Returns None if not authenticated.
+
+        Returns:
+            The JWT ID token string, or None if not authenticated.
+        """
+        return self._id_token
+
+    @property
+    def access_token(self) -> str | None:
+        """The current JWT access token from Cognito.
+
+        This token is used for Cognito API operations and token validation.
+        Returns None if not authenticated.
+
+        Returns:
+            The JWT access token string, or None if not authenticated.
+        """
+        return self._access_token
+
+    @property
+    def refresh_token(self) -> str | None:
+        """The current refresh token from Cognito.
+
+        This token is used to obtain new access/ID tokens when they expire.
+        Useful for persisting authentication state (e.g., in config entries).
+        Returns None if not authenticated.
+
+        Returns:
+            The refresh token string, or None if not authenticated.
+        """
+        return self._refresh_token
+
     def _get_session(self) -> ClientSession:
         """Get or create an aiohttp ClientSession.
 
@@ -171,9 +210,7 @@ class API:
             RuntimeError: If called after the session has been closed.
         """
         if self._session is None or self._session.closed:
-            self._session = ClientSession(
-                timeout=ClientTimeout(total=self.timeout)
-            )
+            self._session = ClientSession(timeout=ClientTimeout(total=self.timeout))
             self._owns_session = True
         return self._session
 
@@ -214,18 +251,19 @@ class API:
         for attempt in range(self.retry_count):
             try:
                 async with session.request(method, url, **kwargs) as resp:
-                    text = await resp.text()
+                    text: str = await resp.text()
                     if text == "success":
                         return text
-                    data: dict[str, Any] = await resp.json(content_type=None)
                     resp.raise_for_status()
+                    data: dict[str, Any] = await resp.json(content_type=None)
                     return data
 
             except RETRYABLE_EXCEPTIONS as err:
                 last_error = err
                 if attempt < self.retry_count - 1:
                     LOGGER.debug(
-                        "Transient error on attempt %d/%d for %s: %s. Retrying in %.1fs",
+                        "Transient error on attempt %d/%d for %s: %s. "
+                        "Retrying in %.1fs",
                         attempt + 1,
                         self.retry_count,
                         url,
@@ -317,9 +355,9 @@ class API:
             )
 
             await self._update_token(
-                cast(str, cognito.id_token),
-                cast(str, cognito.access_token),
-                cast(str, cognito.refresh_token),
+                cast("str", cognito.id_token),
+                cast("str", cognito.access_token),
+                cast("str", cognito.refresh_token),
             )
 
         except ClientError as err:
@@ -387,8 +425,8 @@ class API:
                 timeout=self.executor_timeout,
             )
             await self._update_token(
-                cast(str, cognito.id_token),
-                cast(str, cognito.access_token),
+                cast("str", cognito.id_token),
+                cast("str", cognito.access_token),
             )
 
         except ClientError as err:
@@ -443,9 +481,7 @@ class API:
             user_pool_id=self._user_pool_id,
             client_id=self._client_id,
             user_pool_region=self._pool_region,
-            botocore_config=botocore.config.Config(
-                signature_version=botocore.UNSIGNED
-            ),
+            botocore_config=botocore.config.Config(signature_version=botocore.UNSIGNED),
             session=self._boto_session,
             **kwargs,
         )

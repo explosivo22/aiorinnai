@@ -1,19 +1,22 @@
 """Constants used by RinnaiWaterHeater"""
+
 from __future__ import annotations
 
 import json
 import logging
 from typing import Any
 
-LOGGER = logging.getLogger('aiorinnai')
+LOGGER = logging.getLogger("aiorinnai")
 
-POOL_ID = 'us-east-1_OcwpRQbMM'
-CLIENT_ID = '5ghq3i6k4p9s7dfu34ckmec91'
-POOL_REGION = 'us-east-1'
+POOL_ID = "us-east-1_OcwpRQbMM"
+CLIENT_ID = "5ghq3i6k4p9s7dfu34ckmec91"
+POOL_REGION = "us-east-1"
 
-GRAPHQL_ENDPOINT = 'https://s34ox7kri5dsvdr43bfgp6qh6i.appsync-api.us-east-1.amazonaws.com/graphql'
-SHADOW_ENDPOINT = 'https://d1coipyopavzuf.cloudfront.net/api/device_shadow/input'
-SHADOW_ENDPOINT_PATCH = 'https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow'
+GRAPHQL_ENDPOINT = (
+    "https://s34ox7kri5dsvdr43bfgp6qh6i.appsync-api.us-east-1.amazonaws.com/graphql"
+)
+SHADOW_ENDPOINT = "https://d1coipyopavzuf.cloudfront.net/api/device_shadow/input"
+SHADOW_ENDPOINT_PATCH = "https://698suy4zs3.execute-api.us-east-1.amazonaws.com/Prod/thing/{thing_name}/shadow"
 
 
 def build_graphql_payload(query: str, variables: dict[str, Any]) -> str:
@@ -540,14 +543,14 @@ query GetDevice($id: ID!) {
 """
 
 GET_PAYLOAD_HEADERS = {
-    'x-amz-user-agent': 'aws-amplify/3.4.3 react-native',
-    'x-api-key': 'da2-dm2g4rqvjbaoxcpo4eccs3k5he',
-    'Content-Type': 'application/json'
+    "x-amz-user-agent": "aws-amplify/3.4.3 react-native",
+    "x-api-key": "da2-dm2g4rqvjbaoxcpo4eccs3k5he",
+    "Content-Type": "application/json",
 }
 
 COMMAND_URL = "https://d1coipyopavzuf.cloudfront.net/api/device_shadow/input"
 
 COMMAND_HEADERS = {
-    'User-Agent': 'okhttp/3.12.1',
-    'Content-Type': 'application/x-www-form-urlencoded'
+    "User-Agent": "okhttp/3.12.1",
+    "Content-Type": "application/x-www-form-urlencoded",
 }

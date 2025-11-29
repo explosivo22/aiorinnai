@@ -1,7 +1,9 @@
 # aiorinnai - Python interface for the Rinnai Control-R API
 
 [![PyPi](https://img.shields.io/pypi/v/aiorinnai?style=for-the-badge)](https://pypi.org/project/aiorinnai)
-[![License](https://img.shields.io/github/license/explosivo22/aio-rinnaicontrolr?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![CI](https://img.shields.io/github/actions/workflow/status/explosivo22/aiorinnai/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/explosivo22/aiorinnai/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/explosivo22/aiorinnai?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/pypi/pyversions/aiorinnai?style=for-the-badge)](https://pypi.org/project/aiorinnai)
 
 Python library for communicating with the [Rinnai Control-R Water Heaters and control devices](https://www.rinnai.us/tankless-water-heater/accessories/wifi) via the Rinnai Control-R cloud API.
 
@@ -11,10 +13,7 @@ Python library for communicating with the [Rinnai Control-R Water Heaters and co
 * [iOS](https://apps.apple.com/us/app/rinnai-control-r-2-0/id1180734911?app=itunes&ign-mpt=uo%3D4)
 * [Android](https://play.google.com/store/apps/details?id=com.controlr)
 
-NOTE:
-
-* This library is community supported, please submit changes and improvements.
-* This is a very basic interface, not well thought out at this point, but works for the use cases that initially prompted spitting this out from.
+> **Note:** This library is community supported. Contributions and improvements are welcome!
 
 ## Features
 
@@ -30,6 +29,8 @@ NOTE:
 
 ## Installation
 
+Requires Python 3.11 or higher.
+
 ```bash
 pip install aiorinnai
 ```
@@ -44,10 +45,10 @@ from aiorinnai import API
 async def main() -> None:
     async with API() as api:
         await api.async_login("<EMAIL>", "<PASSWORD>")
-        
+
         user_info = await api.user.get_info()
         device = user_info["devices"]["items"][0]
-        
+
         # Set temperature and start recirculation
         await api.device.set_temperature(device, 120)
         await api.device.start_recirculation(device, duration=5)
@@ -128,7 +129,7 @@ async def main() -> None:
 
         # Set temperature in Celsius (auto-converts to Fahrenheit)
         await api.device.set_temperature(device, 49, TemperatureUnit.CELSIUS)
-        
+
         # Temperature conversion helpers
         fahrenheit = TemperatureUnit.celsius_to_fahrenheit(49)  # Returns 120
         celsius = TemperatureUnit.fahrenheit_to_celsius(120)    # Returns 48.89
@@ -154,7 +155,7 @@ async def main() -> None:
 
         # APIResponse provides success status and data/error info
         response: APIResponse = await api.device.set_temperature(device, 120)
-        
+
         if response.success:
             print("Temperature set successfully!")
             print(f"Response data: {response.data}")
@@ -214,6 +215,59 @@ async def main() -> None:
 
 asyncio.run(main())
 ```
+
+### Token Persistence
+
+For long-running applications (like Home Assistant integrations), you can persist tokens to avoid re-authenticating:
+
+```python
+import asyncio
+from aiorinnai import API
+
+
+async def main() -> None:
+    async with API() as api:
+        # Initial login
+        await api.async_login("<EMAIL>", "<PASSWORD>")
+
+        # Save tokens for later (store securely!)
+        saved_tokens = {
+            "email": api.username,
+            "access_token": api.access_token,
+            "refresh_token": api.refresh_token,
+        }
+        print(f"Tokens saved: {saved_tokens}")
+
+
+async def restore_session() -> None:
+    """Restore a session from saved tokens."""
+    # Load your saved tokens
+    saved_tokens = {
+        "email": "user@example.com",
+        "access_token": "...",
+        "refresh_token": "...",
+    }
+
+    async with API() as api:
+        # Restore session without password
+        await api.async_renew_access_token(
+            email=saved_tokens["email"],
+            access_token=saved_tokens["access_token"],
+            refresh_token=saved_tokens["refresh_token"],
+        )
+
+        # Now you can use the API
+        user_info = await api.user.get_info()
+        print(f"Restored session for: {user_info['email']}")
+
+
+asyncio.run(main())
+```
+
+**Token Properties (read-only):**
+- `api.id_token` - JWT ID token for API authentication
+- `api.access_token` - JWT access token for Cognito operations
+- `api.refresh_token` - Refresh token for obtaining new tokens
 
 ### Input Validation
 
@@ -303,11 +357,16 @@ API(
 
 **Methods:**
 - `async_login(email, password)` - Authenticate with your Rinnai account
+- `async_renew_access_token(email, access_token, refresh_token)` - Restore session from saved tokens
 - `async_check_token()` - Check and refresh token if needed (called automatically)
 - `close()` - Close the API client and release resources
 
 **Properties:**
 - `is_connected` - Returns `True` if connected with valid authentication
+- `username` - The authenticated user's email address
+- `id_token` - JWT ID token (read-only, for API authentication)
+- `access_token` - JWT access token (read-only, for Cognito operations)
+- `refresh_token` - Refresh token (read-only, for token renewal)
 
 **Context Manager:**
 - The API class supports `async with` for automatic resource cleanup
@@ -355,6 +414,7 @@ from aiorinnai import (
 | `CloudError` | Base for authentication errors |
 | `Unauthenticated` | Invalid credentials |
 | `UserNotFound` | User account doesn't exist |
+| `UserExists` | User already exists (during registration) |
 | `UserNotConfirmed` | Email not confirmed |
 | `PasswordChangeRequired` | Password reset needed |
 | `UnknownError` | Unrecognized AWS error |
@@ -371,6 +431,50 @@ from aiorinnai import (
 
 * Not all APIs supported
 
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/explosivo22/aiorinnai.git
+cd aiorinnai
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pip install pre-commit
+pre-commit install
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=aiorinnai --cov-report=term-missing
+```
+
+### Code Quality
+
+```bash
+# Format code
+ruff format .
+
+# Lint code
+ruff check .
+
+# Type checking
+mypy aiorinnai
+```
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
