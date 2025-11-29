@@ -35,18 +35,18 @@ jobs:
       run: |
         VERSION=$(python -c "import aiorinnai; print(aiorinnai.__version__)")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Check if tag exists
       id: check_tag
       run: |
         git fetch --tags
-        if git tag -l "v${{ steps.get_version.outputs.version }}" | grep -q .; then
+        if git tag -l "${{ steps.get_version.outputs.version }}" | grep -q .; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.get_version.outputs.version }} already exists, skipping release"
+          echo "Tag ${{ steps.get_version.outputs.version }} already exists, skipping release"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.get_version.outputs.version }} does not exist, will create release"
+          echo "Tag ${{ steps.get_version.outputs.version }} does not exist, will create release"
         fi
 
     - name: Generate changelog
