@@ -1,5 +1,6 @@
 # Continuous Integration workflow
 # Runs tests on every push and pull request to main branch
+# Auto-creates releases when version changes in __init__.py
 
 name: CI
 
@@ -10,7 +11,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -18,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.11', '3.12', '3.13']
 
     steps:
     - uses: actions/checkout@v4
@@ -57,3 +58,63 @@ jobs:
 
     - name: Check linting
       run: ruff check .
+
+  release:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Get version from __init__.py
+      id: get_version
+      run: |
+        VERSION=$(python -c "import aiorinnai; print(aiorinnai.__version__)")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        if git rev-parse "v${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate changelog
+      if: steps.check_tag.outputs.exists == 'false'
+      id: changelog
+      uses: orhun/git-cliff-action@v4
+      with:
+        config: .github/cliff.toml
+        args: --latest --strip header
+      env:
+        OUTPUT: CHANGELOG.md
+
+    - name: Create and push tag
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a "${{ steps.get_version.outputs.tag }}" -m "Release ${{ steps.get_version.outputs.tag }}"
+        git push origin "${{ steps.get_version.outputs.tag }}"
+
+    - name: Create GitHub Release
+      if: steps.check_tag.outputs.exists == 'false'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get_version.outputs.tag }}
+        name: ${{ steps.get_version.outputs.tag }}
+        body: ${{ steps.changelog.outputs.content }}
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
